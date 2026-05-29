@@ -1,0 +1,592 @@
+{
+  "@@locale": "en",
+  "appTitle": "Crid",
+  "navTimetable": "Timetable",
+  "navPlans": "Plans",
+  "navImport": "Import",
+  "navEditor": "Editor",
+  "navExport": "Export",
+  "navSettings": "Settings",
+  "collapseSidebar": "Collapse sidebar",
+  "expandSidebar": "Expand sidebar",
+  "addCourse": "Add course",
+  "backToTimetable": "Back to timetable",
+  "loadingTimetable": "Loading timetable",
+  "failedToLoadTimetable": "Failed to load timetable: {error}",
+  "@failedToLoadTimetable": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "weekNumber": "Week {week}",
+  "@weekNumber": {
+    "placeholders": {
+      "week": {
+        "type": "int"
+      }
+    }
+  },
+  "visibleSessionsThisWeek": "{count} visible sessions this week",
+  "@visibleSessionsThisWeek": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "previousWeek": "Previous week",
+  "nextWeek": "Next week",
+  "timeHeader": "Time",
+  "thisWeek": "This week",
+  "todayCourses": "Today's courses",
+  "noCoursesToday": "No courses today",
+  "edit": "Edit",
+  "dayMon": "Mon",
+  "dayTue": "Tue",
+  "dayWed": "Wed",
+  "dayThu": "Thu",
+  "dayFri": "Fri",
+  "daySat": "Sat",
+  "daySun": "Sun",
+  "dayNumber": "Weekday {weekday}",
+  "@dayNumber": {
+    "placeholders": {
+      "weekday": {
+        "type": "int"
+      }
+    }
+  },
+  "periodsValue": "Periods {start}-{end}",
+  "@periodsValue": {
+    "placeholders": {
+      "start": {
+        "type": "int"
+      },
+      "end": {
+        "type": "int"
+      }
+    }
+  },
+  "weeksValue": "Weeks {start}-{end}",
+  "@weeksValue": {
+    "placeholders": {
+      "start": {
+        "type": "int"
+      },
+      "end": {
+        "type": "int"
+      }
+    }
+  },
+  "failedToLoadPlans": "Failed to load plans: {error}",
+  "@failedToLoadPlans": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "semesters": "Semesters",
+  "add": "Add",
+  "firstMonday": "First-week Monday: {date}",
+  "@firstMonday": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "current": "Current",
+  "timetablePlans": "Timetable plans",
+  "activeForRemindersAndExport": "Used for reminders and default export",
+  "tapToMakeActive": "Tap to make current",
+  "active": "Current",
+  "plan": "Plan",
+  "selectPlan": "Select",
+  "newPlan": "New plan",
+  "semesterName": "{year}-{month} semester",
+  "@semesterName": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      },
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "planName": "Plan {number}",
+  "@planName": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "courseSessionNotFound": "Course session not found.",
+  "newCourse": "New course",
+  "editCourse": "Edit course",
+  "hideThisSession": "Hide this session",
+  "hideThisSessionSubtitle": "Hidden sessions stay in the database but do not appear on the timetable.",
+  "deleteSession": "Delete session",
+  "saveCourse": "Save course",
+  "courseName": "Course name",
+  "teacher": "Teacher",
+  "location": "Location",
+  "notes": "Notes",
+  "weekday": "Weekday",
+  "startPeriod": "Start period",
+  "endPeriod": "End period",
+  "startWeek": "Start week",
+  "endWeek": "End week",
+  "allWeeks": "All weeks",
+  "oddWeeks": "Odd weeks",
+  "evenWeeks": "Even weeks",
+  "requiredField": "Required",
+  "weekNumberValidation": "Enter a value from 1 to 30.",
+  "courseSaved": "Course saved",
+  "@courseSaved": {
+    "placeholders": {
+      "course": {
+        "type": "String"
+      },
+      "weekday": {
+        "type": "int"
+      },
+      "start": {
+        "type": "int"
+      },
+      "end": {
+        "type": "int"
+      }
+    }
+  },
+  "courseSessionDeleted": "Course session deleted",
+  "restore": "Restore",
+  "courseRestored": "Course restored",
+  "importCenter": "Import center",
+  "importCenterSubtitle": "Import timetable files from the academic system or calendar files.",
+  "chooseFile": "Choose file",
+  "loadSample": "Load sample",
+  "openDiff": "Review imports",
+  "stagingPreview": "Import preview",
+  "merged": "Added to timetable",
+  "waiting": "Choose a file",
+  "notCommitted": "Ready to add",
+  "parsedCount": "{count} parsed",
+  "@parsedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "newCount": "{count} new",
+  "@newCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "changeCount": "{count} changed",
+  "@changeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conflictCount": "{count} conflicts",
+  "@conflictCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "applyStagingMerge": "Add to timetable",
+  "emptyPreview": "Import a timetable file to preview what will be added.",
+  "importFailed": "Import failed: {error}",
+  "@importFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "committedSummary": "Added {added} new sessions. {diffs} updates and {conflicts} overlaps remain for review.",
+  "@committedSummary": {
+    "placeholders": {
+      "added": {
+        "type": "int"
+      },
+      "diffs": {
+        "type": "int"
+      },
+      "conflicts": {
+        "type": "int"
+      }
+    }
+  },
+  "importWarningUnsupportedFileType": "This file type is not supported yet. Choose a timetable spreadsheet or calendar file.",
+  "importWarningWorkbookReadFailed": "Could not read this .xls file. Check that the file is not damaged.",
+  "importWarningNoCompleteXlsRows": "The file looks like a timetable, but no complete courses were found.",
+  "importWarningXlsParsedSessions": "Recognized {count} class sessions from the spreadsheet.",
+  "@importWarningXlsParsedSessions": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importWarningNoCoursesFromHtml": "No courses were recognized from the table.",
+  "importWarningDecodedWithFallback": "The file encoding was converted automatically.",
+  "importWarningFragmentMissingName": "One course block was missing a course name and was skipped.",
+  "importWarningMissingWeekday": "One class time was missing a weekday and was skipped.",
+  "importWarningMissingPeriod": "One class time was missing class periods and was skipped.",
+  "importWarningMissingWeeks": "One class time was missing week numbers and was skipped.",
+  "importWarningNoCompleteEntries": "Class-time text was found, but no complete courses were recognized.",
+  "importWarningIcsParseFailed": "Could not read this calendar file. Check that the file format is valid.",
+  "importWarningSkippedIcsEvent": "One calendar event was missing a course name or time and was skipped.",
+  "importWarningIcsRuleFallback": "One repeating course could not be fully expanded and was imported as a single class.",
+  "importWarningGenericError": "Some file content could not be read.",
+  "importWarningGenericWarning": "Some file content could not be recognized.",
+  "importWarningGenericInfo": "Some file content was handled automatically during import.",
+  "course": "Course",
+  "time": "Time",
+  "weeks": "Weeks",
+  "recentBatches": "Recent batches",
+  "failedToLoadHistory": "Failed to load import history: {error}",
+  "@failedToLoadHistory": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "noImportBatchesYet": "No import batches yet",
+  "committedImportsAppearHere": "Finished imports will appear here.",
+  "batchSubtitle": "{type} - {summary} - {date}",
+  "@batchSubtitle": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      },
+      "summary": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToLoadConflicts": "Failed to load conflicts: {error}",
+  "@failedToLoadConflicts": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "noPendingConflicts": "No imports need review",
+  "conflictHandling": "Conflict handling",
+  "conflictHandlingSubtitle": "Review imported courses that need a choice before they can be added cleanly.",
+  "changedFieldsCount": "{count} changed fields",
+  "@changedFieldsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeConflictsCount": "{count} time conflicts",
+  "@timeConflictsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pendingCount": "{count} need review",
+  "@pendingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conflict": "Conflict",
+  "changed": "Changed",
+  "currentValue": "Current",
+  "importedValue": "Imported",
+  "keepCurrent": "Keep current",
+  "useImported": "Use imported",
+  "keepBoth": "Keep both",
+  "forceMerge": "Keep overlapping",
+  "manualEdit": "Manual edit",
+  "conflictMarked": "Choice saved: {action}.",
+  "@conflictMarked": {
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
+  },
+  "courseSummary": "Weekday {weekday}, period {period}, {weeks}, {teacher}, {location}",
+  "@courseSummary": {
+    "placeholders": {
+      "weekday": {
+        "type": "int"
+      },
+      "period": {
+        "type": "String"
+      },
+      "weeks": {
+        "type": "String"
+      },
+      "teacher": {
+        "type": "String"
+      },
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "weekUnknown": "Week unknown",
+  "teacherTbd": "Teacher TBD",
+  "locationTbd": "Location TBD",
+  "changedFields": "Changed fields",
+  "@changedFields": {
+    "placeholders": {
+      "fields": {
+        "type": "String"
+      }
+    }
+  },
+  "timeOverlap": "Time overlap",
+  "icsCalendarExport": "ICS calendar export",
+  "icsCalendarExportSubtitle": "Export the active timetable as a calendar file.",
+  "exportIcs": "Export ICS",
+  "currentWeekImage": "Current-week image",
+  "currentWeekImageSubtitle": "Capture the visible timetable week as a PNG.",
+  "fullSemesterImage": "Full-semester image",
+  "fullSemesterImageSubtitle": "Capture every teaching week as one long PNG.",
+  "exportPng": "Export PNG",
+  "exportTimetableCalendar": "Export timetable calendar",
+  "exportTimetableImage": "Export timetable image",
+  "exportSemesterTimetableImage": "Export semester timetable image",
+  "exportedPath": "Exported to {path}",
+  "openExportedFile": "Open",
+  "preparingExport": "Preparing export",
+  "openExportedFileFailed": "Could not open file: {message}",
+  "@exportedPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "@openExportedFileFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "fullSemester": "Full semester",
+  "failedToLoadReminderSettings": "Failed to load reminder settings: {error}",
+  "@failedToLoadReminderSettings": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "failedToLoadLanguageSetting": "Failed to load language setting: {error}",
+  "@failedToLoadLanguageSetting": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "failedToLoadThemeSetting": "Failed to load theme setting: {error}",
+  "@failedToLoadThemeSetting": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "language": "Language",
+  "languageSystem": "Follow system",
+  "languageSimplifiedChinese": "Simplified Chinese",
+  "languageTraditionalChinese": "Traditional Chinese",
+  "languageEnglish": "English",
+  "display": "Display",
+  "themeModeSystem": "Follow system",
+  "themeModeLight": "Light",
+  "themeModeDark": "Dark",
+  "denseTimetable": "Dense timetable",
+  "denseTimetableSubtitle": "Reserved for a future compact view.",
+  "localData": "Local data",
+  "localDataSubtitle": "Timetables, imports, and reminders are stored on this device.",
+  "offlineAppSubtitle": "Offline-first timetable app for campus schedules.",
+  "thirdPartyLicenses": "Third-party licenses",
+  "thirdPartyLicensesSubtitle": "View open-source licenses for Flutter and app dependencies.",
+  "reminders": "Reminders",
+  "reminderNotificationTitle": "Class starts in {minutes} min",
+  "@reminderNotificationTitle": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "courseReminders": "Course reminders",
+  "courseRemindersSubtitle": "Automatically update reminders for the next four weeks after timetable changes.",
+  "androidBackgroundSettings": "Android background running",
+  "androidBackgroundSettingsSubtitle": "Allows course reminders to continue when the system limits background tasks.",
+  "androidBackgroundUnsupported": "This setting is available on Android devices only.",
+  "androidDeviceStatusTitle": "Android device",
+  "androidDeviceStatus": "{manufacturer} {model}, Android {version}",
+  "@androidDeviceStatus": {
+    "placeholders": {
+      "manufacturer": {
+        "type": "String"
+      },
+      "model": {
+        "type": "String"
+      },
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToLoadAndroidBackgroundStatus": "Failed to load Android background status: {error}",
+  "@failedToLoadAndroidBackgroundStatus": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "persistentBackgroundRuntime": "Continuous background running",
+  "persistentBackgroundRuntimeSubtitle": "Shows a silent ongoing notification in the notification shade to maintain background reminder tasks.",
+  "persistentBackgroundRuntimeAllowed": "Battery optimization exemption is enabled, reducing the effect of system battery limits on background tasks.",
+  "openNotificationSettings": "Notifications",
+  "openBatterySettings": "Battery settings",
+  "openExactAlarmSettings": "Exact alarm access",
+  "openAutostartSettings": "Autostart",
+  "requestBatteryExemption": "Request background access",
+  "leadTime": "Remind me before class",
+  "minutesShort": "{minutes} min",
+  "@minutesShort": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "goToToday": "Today",
+  "delete": "Delete",
+  "save": "Save",
+  "cancel": "Cancel",
+  "clear": "Clear",
+  "semesterEndDate": "End date: {date}",
+  "semesterStartDate": "Semester start date",
+  "semesterEndDateOptional": "Semester end date (optional)",
+  "noSemesterEndDate": "No end date",
+  "chooseSemesterStartDate": "Choose first-week Monday",
+  "chooseSemesterEndDate": "Choose semester end date",
+  "addSemester": "Add semester",
+  "editSemester": "Edit semester",
+  "deleteSemester": "Delete semester",
+  "deleteSemesterConfirmation": "Delete semester \"{name}\"? Courses and plans in it will be removed.",
+  "cannotDeleteLastSemester": "At least one semester is required.",
+  "semesterDeleted": "Semester deleted",
+  "editPlan": "Edit plan",
+  "deletePlan": "Delete plan",
+  "deletePlanConfirmation": "Delete plan \"{name}\"? Courses in it will be removed.",
+  "cannotDeleteLastPlan": "At least one plan is required in the active semester.",
+  "planDeleted": "Plan deleted",
+  "semesterNameLabel": "Semester name",
+  "planNameLabel": "Plan name",
+  "hiddenCourses": "Hidden courses",
+  "hiddenCoursesSubtitle": "Restore courses that were hidden from the timetable.",
+  "noHiddenCourses": "No hidden courses",
+  "sessionCount": "{count, plural, =1{1 session} other{{count} sessions}}",
+  "@semesterEndDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "@deleteSemesterConfirmation": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@deletePlanConfirmation": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToLoadHolidaySettings": "Failed to load holiday mode settings: {error}",
+  "holidayMode": "Holiday mode",
+  "legalHolidays": "Legal holidays",
+  "legalHolidaysSubtitle": "Automatically hide courses on China legal holiday dates without deleting course records.",
+  "holidayAdjustment": "Holiday adjustment",
+  "holidayAdjustmentSubtitle": "Choose whether classes follow the official holiday adjustment schedule.",
+  "holidayAdjustmentNoAdjustment": "Do not adjust holidays",
+  "holidayAdjustmentMakeUpWorkdays": "Follow adjusted class days",
+  "holidayAdjustmentNoMakeUpWorkdays": "Rest on adjusted makeup days",
+  "holidayDataLoading": "Fetching China holiday schedule for {year}.",
+  "holidayDataFailed": "Could not fetch the holiday schedule. Try again later.",
+  "holidayDataUnavailable": "No holiday schedule for {year} is saved on this device.",
+  "holidayDataCached": "Using the last holiday schedule fetched for {year}.",
+  "holidayDataUpdated": "Fetched China holiday schedule for {year}.",
+  "@failedToLoadHolidaySettings": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "@holidayDataLoading": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "@holidayDataUnavailable": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "@holidayDataCached": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "@holidayDataUpdated": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  }
+}

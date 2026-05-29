@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Crid</string>
+    <string name="background_runtime_channel_name">Background course reminders</string>
+    <string name="background_runtime_channel_description">Shows a silent ongoing notification while background running is enabled</string>
+    <string name="background_runtime_notification_title">Crid is running in the background</string>
+    <string name="background_runtime_notification_text">A silent ongoing notification is maintaining course reminders.</string>
+</resources>
