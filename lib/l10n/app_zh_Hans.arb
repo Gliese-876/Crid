@@ -1,0 +1,592 @@
+{
+  "@@locale": "zh_Hans",
+  "appTitle": "课格",
+  "navTimetable": "课表",
+  "navPlans": "方案",
+  "navImport": "导入",
+  "navEditor": "编辑",
+  "navExport": "导出",
+  "navSettings": "设置",
+  "collapseSidebar": "收起侧边栏",
+  "expandSidebar": "展开侧边栏",
+  "addCourse": "新增课程",
+  "backToTimetable": "返回课表",
+  "loadingTimetable": "正在加载课表",
+  "failedToLoadTimetable": "课表加载失败：{error}",
+  "@failedToLoadTimetable": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "weekNumber": "第 {week} 周",
+  "@weekNumber": {
+    "placeholders": {
+      "week": {
+        "type": "int"
+      }
+    }
+  },
+  "visibleSessionsThisWeek": "本周 {count} 个可见安排",
+  "@visibleSessionsThisWeek": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "previousWeek": "上一周",
+  "nextWeek": "下一周",
+  "timeHeader": "时间",
+  "thisWeek": "本周课程",
+  "todayCourses": "今日课程",
+  "noCoursesToday": "今天没有课程",
+  "edit": "编辑",
+  "dayMon": "周一",
+  "dayTue": "周二",
+  "dayWed": "周三",
+  "dayThu": "周四",
+  "dayFri": "周五",
+  "daySat": "周六",
+  "daySun": "周日",
+  "dayNumber": "星期 {weekday}",
+  "@dayNumber": {
+    "placeholders": {
+      "weekday": {
+        "type": "int"
+      }
+    }
+  },
+  "periodsValue": "第 {start}-{end} 节",
+  "@periodsValue": {
+    "placeholders": {
+      "start": {
+        "type": "int"
+      },
+      "end": {
+        "type": "int"
+      }
+    }
+  },
+  "weeksValue": "第 {start}-{end} 周",
+  "@weeksValue": {
+    "placeholders": {
+      "start": {
+        "type": "int"
+      },
+      "end": {
+        "type": "int"
+      }
+    }
+  },
+  "failedToLoadPlans": "方案加载失败：{error}",
+  "@failedToLoadPlans": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "semesters": "学期",
+  "add": "添加",
+  "firstMonday": "第一周周一：{date}",
+  "@firstMonday": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "current": "当前",
+  "timetablePlans": "课表方案",
+  "activeForRemindersAndExport": "用于提醒和默认导出",
+  "tapToMakeActive": "点击设为当前方案",
+  "active": "当前",
+  "plan": "方案",
+  "selectPlan": "选择",
+  "newPlan": "新建方案",
+  "semesterName": "{year}-{month} 学期",
+  "@semesterName": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      },
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "planName": "方案 {number}",
+  "@planName": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "courseSessionNotFound": "找不到课程安排。",
+  "newCourse": "新增课程",
+  "editCourse": "编辑课程",
+  "hideThisSession": "隐藏此安排",
+  "hideThisSessionSubtitle": "隐藏后课程保留在方案中，但不会显示在周视图里。",
+  "deleteSession": "删除安排",
+  "saveCourse": "保存课程",
+  "courseName": "课程名称",
+  "teacher": "教师",
+  "location": "地点",
+  "notes": "备注",
+  "weekday": "星期",
+  "startPeriod": "开始节次",
+  "endPeriod": "结束节次",
+  "startWeek": "开始周",
+  "endWeek": "结束周",
+  "allWeeks": "全部",
+  "oddWeeks": "单周",
+  "evenWeeks": "双周",
+  "requiredField": "必填",
+  "weekNumberValidation": "请输入 1-30",
+  "courseSaved": "已保存 {course}：星期 {weekday}，第 {start}-{end} 节。",
+  "@courseSaved": {
+    "placeholders": {
+      "course": {
+        "type": "String"
+      },
+      "weekday": {
+        "type": "int"
+      },
+      "start": {
+        "type": "int"
+      },
+      "end": {
+        "type": "int"
+      }
+    }
+  },
+  "courseSessionDeleted": "课程安排已删除。",
+  "restore": "恢复",
+  "courseRestored": "课程已恢复",
+  "importCenter": "导入中心",
+  "importCenterSubtitle": "支持教务系统导出的课表文件，也可以导入日历文件。",
+  "chooseFile": "选择文件",
+  "loadSample": "加载样例",
+  "openDiff": "查看需确认课程",
+  "stagingPreview": "导入预览",
+  "merged": "已加入课表",
+  "waiting": "请选择文件",
+  "notCommitted": "可导入",
+  "parsedCount": "{count} 条解析结果",
+  "@parsedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "newCount": "{count} 条新增",
+  "@newCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "changeCount": "{count} 处变化",
+  "@changeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conflictCount": "{count} 个冲突",
+  "@conflictCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "applyStagingMerge": "加入课表",
+  "emptyPreview": "选择课表文件或加载样例，先预览将要导入的课程。",
+  "importFailed": "导入失败：{error}",
+  "@importFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "committedSummary": "已加入 {added} 个新安排；{diffs} 处变化和 {conflicts} 个时间重叠可继续确认。",
+  "@committedSummary": {
+    "placeholders": {
+      "added": {
+        "type": "int"
+      },
+      "diffs": {
+        "type": "int"
+      },
+      "conflicts": {
+        "type": "int"
+      }
+    }
+  },
+  "importWarningUnsupportedFileType": "暂不支持这个文件类型，请选择课表表格或日历文件。",
+  "importWarningWorkbookReadFailed": "无法读取这个 .xls 文件，请确认文件没有损坏。",
+  "importWarningNoCompleteXlsRows": "已识别为课表文件，但没有找到完整课程。",
+  "importWarningXlsParsedSessions": "已从表格中识别 {count} 个课程安排。",
+  "@importWarningXlsParsedSessions": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importWarningNoCoursesFromHtml": "没有从表格中识别出课程。",
+  "importWarningDecodedWithFallback": "文件编码已自动转换。",
+  "importWarningFragmentMissingName": "有一段课程信息缺少课程名称，已跳过。",
+  "importWarningMissingWeekday": "有一条课程时间缺少星期，已跳过。",
+  "importWarningMissingPeriod": "有一条课程时间缺少节次，已跳过。",
+  "importWarningMissingWeeks": "有一条课程时间缺少周次，已跳过。",
+  "importWarningNoCompleteEntries": "检测到课程时间文本，但没有识别出完整课程。",
+  "importWarningIcsParseFailed": "无法读取这个日历文件，请确认文件格式正确。",
+  "importWarningSkippedIcsEvent": "日历中有一条事件缺少课程名称或时间，已跳过。",
+  "importWarningIcsRuleFallback": "有一条重复课程无法完整展开，已先按单次课程导入。",
+  "importWarningGenericError": "文件中有内容无法读取。",
+  "importWarningGenericWarning": "文件中有部分内容未能识别。",
+  "importWarningGenericInfo": "导入时已自动处理部分文件内容。",
+  "course": "课程",
+  "time": "时间",
+  "weeks": "周次",
+  "recentBatches": "最近导入",
+  "failedToLoadHistory": "导入历史加载失败：{error}",
+  "@failedToLoadHistory": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "noImportBatchesYet": "暂无导入记录",
+  "committedImportsAppearHere": "完成导入后会显示在这里。",
+  "batchSubtitle": "{type} - {summary} - {date}",
+  "@batchSubtitle": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      },
+      "summary": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToLoadConflicts": "冲突加载失败：{error}",
+  "@failedToLoadConflicts": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "noPendingConflicts": "暂无需要确认的导入课程。",
+  "conflictHandling": "冲突处理",
+  "conflictHandlingSubtitle": "请确认导入课程中需要选择的变化和时间重叠。",
+  "changedFieldsCount": "{count} 处字段变化",
+  "@changedFieldsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeConflictsCount": "{count} 个时间冲突",
+  "@timeConflictsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pendingCount": "{count} 项需确认",
+  "@pendingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conflict": "冲突",
+  "changed": "已变化",
+  "currentValue": "当前",
+  "importedValue": "导入",
+  "keepCurrent": "保留当前",
+  "useImported": "采用导入",
+  "keepBoth": "两者共存",
+  "forceMerge": "保留重叠课程",
+  "manualEdit": "手动编辑",
+  "conflictMarked": "已选择：{action}。",
+  "@conflictMarked": {
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
+  },
+  "courseSummary": "星期 {weekday}，第 {period} 节，{weeks}，{teacher}，{location}",
+  "@courseSummary": {
+    "placeholders": {
+      "weekday": {
+        "type": "int"
+      },
+      "period": {
+        "type": "String"
+      },
+      "weeks": {
+        "type": "String"
+      },
+      "teacher": {
+        "type": "String"
+      },
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "weekUnknown": "周次未知",
+  "teacherTbd": "教师待定",
+  "locationTbd": "地点待定",
+  "changedFields": "变化：{fields}",
+  "@changedFields": {
+    "placeholders": {
+      "fields": {
+        "type": "String"
+      }
+    }
+  },
+  "timeOverlap": "时间重叠",
+  "icsCalendarExport": "ICS 日历导出",
+  "icsCalendarExportSubtitle": "按北京时间导出，可导入系统日历。",
+  "exportIcs": "导出 .ics",
+  "currentWeekImage": "当前周图片",
+  "currentWeekImageSubtitle": "生成当前活动周的 PNG 课表快照。",
+  "fullSemesterImage": "整学期图片",
+  "fullSemesterImageSubtitle": "生成包含所有课程周次范围的 PNG 总览。",
+  "exportPng": "导出 PNG",
+  "exportTimetableCalendar": "导出课程日历",
+  "exportTimetableImage": "导出课表图片",
+  "exportSemesterTimetableImage": "导出整学期课表图片",
+  "exportedPath": "已导出 {path}",
+  "openExportedFile": "打开",
+  "preparingExport": "正在准备导出",
+  "openExportedFileFailed": "无法打开文件：{message}",
+  "@exportedPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "@openExportedFileFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "fullSemester": "整学期",
+  "failedToLoadReminderSettings": "提醒设置加载失败：{error}",
+  "@failedToLoadReminderSettings": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "failedToLoadLanguageSetting": "语言设置加载失败：{error}",
+  "@failedToLoadLanguageSetting": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "failedToLoadThemeSetting": "主题设置加载失败：{error}",
+  "@failedToLoadThemeSetting": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "language": "语言",
+  "languageSystem": "跟随系统",
+  "languageSimplifiedChinese": "简体中文",
+  "languageTraditionalChinese": "繁體中文",
+  "languageEnglish": "English",
+  "display": "显示",
+  "themeModeSystem": "跟随系统",
+  "themeModeLight": "浅色",
+  "themeModeDark": "深色",
+  "denseTimetable": "紧凑课表",
+  "denseTimetableSubtitle": "第一版已为自适应界面启用紧凑行距。",
+  "localData": "本地数据",
+  "localDataSubtitle": "课表、导入记录和提醒设置只保存在本机。",
+  "offlineAppSubtitle": "无需登录；课表和提醒都在本机处理。",
+  "thirdPartyLicenses": "第三方开源许可",
+  "thirdPartyLicensesSubtitle": "查看 Flutter 和依赖库的开源许可。",
+  "reminders": "课程提醒",
+  "reminderNotificationTitle": "{minutes} 分钟后上课",
+  "@reminderNotificationTitle": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "courseReminders": "课程提醒",
+  "courseRemindersSubtitle": "课程变化后自动更新未来四周的提醒。",
+  "androidBackgroundSettings": "Android 后台运行",
+  "androidBackgroundSettingsSubtitle": "用于在系统限制后台任务时继续处理课程提醒。",
+  "androidBackgroundUnsupported": "这项设置仅在 Android 设备上可用。",
+  "androidDeviceStatusTitle": "Android 设备",
+  "androidDeviceStatus": "{manufacturer} {model}，Android {version}",
+  "@androidDeviceStatus": {
+    "placeholders": {
+      "manufacturer": {
+        "type": "String"
+      },
+      "model": {
+        "type": "String"
+      },
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToLoadAndroidBackgroundStatus": "Android 后台状态加载失败：{error}",
+  "@failedToLoadAndroidBackgroundStatus": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "persistentBackgroundRuntime": "持续后台运行",
+  "persistentBackgroundRuntimeSubtitle": "开启后会在通知栏显示静默常驻通知，用于维持课程提醒的后台任务。",
+  "persistentBackgroundRuntimeAllowed": "已获得电池优化豁免，后台任务受系统电池限制的影响会减少。",
+  "openNotificationSettings": "通知设置",
+  "openBatterySettings": "电池设置",
+  "openExactAlarmSettings": "精确闹钟权限",
+  "openAutostartSettings": "自启动设置",
+  "requestBatteryExemption": "申请后台运行权限",
+  "leadTime": "提前提醒",
+  "minutesShort": "{minutes} 分钟",
+  "@minutesShort": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "goToToday": "回到今天",
+  "delete": "删除",
+  "save": "保存",
+  "cancel": "取消",
+  "clear": "清除",
+  "semesterEndDate": "结束日期：{date}",
+  "semesterStartDate": "学期开始日（第一周周一）",
+  "semesterEndDateOptional": "结束日期（可选）",
+  "noSemesterEndDate": "未设置结束日期",
+  "chooseSemesterStartDate": "选择学期开始日（第一周周一）",
+  "chooseSemesterEndDate": "选择学期结束日期",
+  "addSemester": "添加学期",
+  "editSemester": "编辑学期",
+  "deleteSemester": "删除学期",
+  "deleteSemesterConfirmation": "确定删除“{name}”及其中的课程表方案吗？",
+  "cannotDeleteLastSemester": "至少需要保留一个学期",
+  "semesterDeleted": "学期已删除",
+  "editPlan": "编辑方案",
+  "deletePlan": "删除方案",
+  "deletePlanConfirmation": "确定删除“{name}”吗？",
+  "cannotDeleteLastPlan": "至少需要保留一个方案",
+  "planDeleted": "方案已删除",
+  "semesterNameLabel": "学期名称",
+  "planNameLabel": "方案名称",
+  "hiddenCourses": "已隐藏课程",
+  "hiddenCoursesSubtitle": "找回已从课表中隐藏的课程。",
+  "noHiddenCourses": "没有已隐藏课程",
+  "sessionCount": "{count} 个安排",
+  "@semesterEndDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "@deleteSemesterConfirmation": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@deletePlanConfirmation": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToLoadHolidaySettings": "放假模式设置加载失败：{error}",
+  "holidayMode": "放假模式",
+  "legalHolidays": "法定节假日",
+  "legalHolidaysSubtitle": "开启后自动隐藏中国法定节假日当天的课程，不删除课程记录。",
+  "holidayAdjustment": "调休",
+  "holidayAdjustmentSubtitle": "选择是否按官方调休安排显示课程。",
+  "holidayAdjustmentNoAdjustment": "不调休",
+  "holidayAdjustmentMakeUpWorkdays": "按调休安排上课",
+  "holidayAdjustmentNoMakeUpWorkdays": "调休补班日也休息",
+  "holidayDataLoading": "正在获取 {year} 年中国节假日安排。",
+  "holidayDataFailed": "暂时无法获取节假日安排，请稍后再试。",
+  "holidayDataUnavailable": "本机暂无 {year} 年节假日安排。",
+  "holidayDataCached": "正在使用上次获取的 {year} 年中国节假日安排。",
+  "holidayDataUpdated": "已获取 {year} 年中国节假日安排。",
+  "@failedToLoadHolidaySettings": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "@holidayDataLoading": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "@holidayDataUnavailable": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "@holidayDataCached": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "@holidayDataUpdated": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  }
+}

@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">课格</string>
+    <string name="background_runtime_channel_name">后台课程提醒</string>
+    <string name="background_runtime_channel_description">后台运行开启时在通知栏显示静默常驻通知</string>
+    <string name="background_runtime_notification_title">课格正在后台运行</string>
+    <string name="background_runtime_notification_text">正在通过通知栏静默常驻通知维持课程提醒。</string>
+</resources>
