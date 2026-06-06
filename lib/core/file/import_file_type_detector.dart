@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-enum ImportFileType { htmlXls, biffXls, ics, unknown }
+enum ImportFileType { htmlXls, biffXls, ics, mhtml, pdf, plainText, unknown }
 
 class ImportFileTypeDetector {
   const ImportFileTypeDetector();
@@ -9,6 +9,15 @@ class ImportFileTypeDetector {
     final extension = _extensionOf(fileName);
     if (_hasOleCompoundSignature(bytes)) {
       return ImportFileType.biffXls;
+    }
+    if (extension == '.mht' || extension == '.mhtml') {
+      return ImportFileType.mhtml;
+    }
+    if (extension == '.pdf' || _hasPdfSignature(bytes)) {
+      return ImportFileType.pdf;
+    }
+    if (extension == '.txt') {
+      return ImportFileType.plainText;
     }
 
     final prefix = ascii
@@ -36,6 +45,19 @@ class ImportFileTypeDetector {
     }
 
     return ImportFileType.unknown;
+  }
+
+  bool _hasPdfSignature(List<int> bytes) {
+    const signature = [0x25, 0x50, 0x44, 0x46, 0x2D];
+    if (bytes.length < signature.length) {
+      return false;
+    }
+    for (var i = 0; i < signature.length; i++) {
+      if (bytes[i] != signature[i]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   bool _hasOleCompoundSignature(List<int> bytes) {

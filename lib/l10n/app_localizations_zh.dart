@@ -203,10 +203,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get weekday => '星期';
 
   @override
-  String get startPeriod => '开始节次';
+  String get startPeriod => '开始时间';
 
   @override
-  String get endPeriod => '结束节次';
+  String get endPeriod => '结束时间';
 
   @override
   String get startWeek => '开始周';
@@ -230,8 +230,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get weekNumberValidation => '请输入 1-30';
 
   @override
-  String courseSaved(String course, int weekday, int start, int end) {
-    return '已保存 $course：星期 $weekday，第 $start-$end 节。';
+  String get timeValidation => '请使用 HH:mm，且结束时间晚于开始时间。';
+
+  @override
+  String courseSaved(String course, int weekday, String start, String end) {
+    return '已保存 $course：星期 $weekday，$start-$end。';
   }
 
   @override
@@ -251,6 +254,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chooseFile => '选择文件';
+
+  @override
+  String get pasteExamSchedule => '粘贴考试安排';
+
+  @override
+  String get pasteExamScheduleHint => '粘贴教务系统考试安排表中的文本。';
+
+  @override
+  String get importExamSchedule => '导入考试安排';
 
   @override
   String get loadSample => '加载样例';
@@ -281,6 +293,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String skippedCount(int count) {
+    return '$count 条跳过';
+  }
+
+  @override
+  String examParsedCount(int count) {
+    return '$count 条考试安排';
+  }
+
+  @override
   String changeCount(int count) {
     return '$count 处变化';
   }
@@ -304,6 +326,11 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String committedSummary(int added, int diffs, int conflicts) {
     return '已加入 $added 个新安排；$diffs 处变化和 $conflicts 个时间重叠可继续确认。';
+  }
+
+  @override
+  String examImportCommittedSummary(int added, int skipped) {
+    return '已导入 $added 条考试安排，跳过 $skipped 条重复记录。';
   }
 
   @override
@@ -367,6 +394,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get weeks => '周次';
+
+  @override
+  String get examRound => '考试轮次';
+
+  @override
+  String get examTime => '考试时间';
+
+  @override
+  String get seatNumber => '座位号';
 
   @override
   String get recentBatches => '最近导入';
@@ -583,13 +619,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get localDataSubtitle => '课表、导入记录和提醒设置只保存在本机。';
 
   @override
+  String get backupLocalData => '备份到本地';
+
+  @override
+  String get restoreLocalData => '从备份恢复';
+
+  @override
+  String backupCreated(String path) {
+    return '备份已保存到 $path';
+  }
+
+  @override
+  String get backupRestored => '数据和设置已恢复。';
+
+  @override
+  String localDataActionFailed(Object error) {
+    return '本地数据操作失败：$error';
+  }
+
+  @override
   String get offlineAppSubtitle => '无需登录；课表和提醒都在本机处理。';
 
   @override
-  String get thirdPartyLicenses => '第三方开源许可';
+  String get thirdPartyLicenses => '开放源代码许可';
 
   @override
-  String get thirdPartyLicensesSubtitle => '查看 Flutter 和依赖库的开源许可。';
+  String get thirdPartyLicensesSubtitle => '查看课格、Flutter 和依赖库的开放源代码许可。';
+
+  @override
+  String get appLicenseDisplayName => '课格（Crid）';
+
+  @override
+  String get appLicenseSummary =>
+      '课格（Crid）采用 Apache License 2.0 开放源代码许可；分发时请保留 LICENSE 和 NOTICE 中的归属声明。';
 
   @override
   String get reminders => '课程提醒';
@@ -664,6 +726,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String minutesShort(int minutes) {
     return '$minutes 分钟';
   }
+
+  @override
+  String get customReminderTime => '自定义时间';
+
+  @override
+  String get minutesBeforeClass => '上课前';
+
+  @override
+  String get minutesUnit => '分钟';
+
+  @override
+  String get ignoreDoNotDisturb => '忽略免打扰';
+
+  @override
+  String get ignoreDoNotDisturbSubtitle => 'Android 会打开系统授权页；授权后提醒渠道可绕过免打扰。';
+
+  @override
+  String get vibrateReminder => '关闭提醒声音';
+
+  @override
+  String get vibrateReminderSubtitle => '课程提醒仍会振动，但不播放提示音。';
 
   @override
   String get goToToday => '回到今天';
@@ -1009,10 +1092,10 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get weekday => '星期';
 
   @override
-  String get startPeriod => '开始节次';
+  String get startPeriod => '开始时间';
 
   @override
-  String get endPeriod => '结束节次';
+  String get endPeriod => '结束时间';
 
   @override
   String get startWeek => '开始周';
@@ -1036,8 +1119,11 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get weekNumberValidation => '请输入 1-30';
 
   @override
-  String courseSaved(String course, int weekday, int start, int end) {
-    return '已保存 $course：星期 $weekday，第 $start-$end 节。';
+  String get timeValidation => '请使用 HH:mm，且结束时间晚于开始时间。';
+
+  @override
+  String courseSaved(String course, int weekday, String start, String end) {
+    return '已保存 $course：星期 $weekday，$start-$end。';
   }
 
   @override
@@ -1057,6 +1143,15 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get chooseFile => '选择文件';
+
+  @override
+  String get pasteExamSchedule => '粘贴考试安排';
+
+  @override
+  String get pasteExamScheduleHint => '粘贴教务系统考试安排表中的文本。';
+
+  @override
+  String get importExamSchedule => '导入考试安排';
 
   @override
   String get loadSample => '加载样例';
@@ -1087,6 +1182,16 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
+  String skippedCount(int count) {
+    return '$count 条跳过';
+  }
+
+  @override
+  String examParsedCount(int count) {
+    return '$count 条考试安排';
+  }
+
+  @override
   String changeCount(int count) {
     return '$count 处变化';
   }
@@ -1110,6 +1215,11 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String committedSummary(int added, int diffs, int conflicts) {
     return '已加入 $added 个新安排；$diffs 处变化和 $conflicts 个时间重叠可继续确认。';
+  }
+
+  @override
+  String examImportCommittedSummary(int added, int skipped) {
+    return '已导入 $added 条考试安排，跳过 $skipped 条重复记录。';
   }
 
   @override
@@ -1173,6 +1283,15 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get weeks => '周次';
+
+  @override
+  String get examRound => '考试轮次';
+
+  @override
+  String get examTime => '考试时间';
+
+  @override
+  String get seatNumber => '座位号';
 
   @override
   String get recentBatches => '最近导入';
@@ -1389,13 +1508,39 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get localDataSubtitle => '课表、导入记录和提醒设置只保存在本机。';
 
   @override
+  String get backupLocalData => '备份到本地';
+
+  @override
+  String get restoreLocalData => '从备份恢复';
+
+  @override
+  String backupCreated(String path) {
+    return '备份已保存到 $path';
+  }
+
+  @override
+  String get backupRestored => '数据和设置已恢复。';
+
+  @override
+  String localDataActionFailed(Object error) {
+    return '本地数据操作失败：$error';
+  }
+
+  @override
   String get offlineAppSubtitle => '无需登录；课表和提醒都在本机处理。';
 
   @override
-  String get thirdPartyLicenses => '第三方开源许可';
+  String get thirdPartyLicenses => '开放源代码许可';
 
   @override
-  String get thirdPartyLicensesSubtitle => '查看 Flutter 和依赖库的开源许可。';
+  String get thirdPartyLicensesSubtitle => '查看课格、Flutter 和依赖库的开放源代码许可。';
+
+  @override
+  String get appLicenseDisplayName => '课格（Crid）';
+
+  @override
+  String get appLicenseSummary =>
+      '课格（Crid）采用 Apache License 2.0 开放源代码许可；分发时请保留 LICENSE 和 NOTICE 中的归属声明。';
 
   @override
   String get reminders => '课程提醒';
@@ -1470,6 +1615,27 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String minutesShort(int minutes) {
     return '$minutes 分钟';
   }
+
+  @override
+  String get customReminderTime => '自定义时间';
+
+  @override
+  String get minutesBeforeClass => '上课前';
+
+  @override
+  String get minutesUnit => '分钟';
+
+  @override
+  String get ignoreDoNotDisturb => '忽略免打扰';
+
+  @override
+  String get ignoreDoNotDisturbSubtitle => 'Android 会打开系统授权页；授权后提醒渠道可绕过免打扰。';
+
+  @override
+  String get vibrateReminder => '关闭提醒声音';
+
+  @override
+  String get vibrateReminderSubtitle => '课程提醒仍会振动，但不播放提示音。';
 
   @override
   String get goToToday => '回到今天';
@@ -1621,7 +1787,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   AppLocalizationsZhHant() : super('zh_Hant');
 
   @override
-  String get appTitle => '课格';
+  String get appTitle => '課格';
 
   @override
   String get navTimetable => '課表';
@@ -1815,10 +1981,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get weekday => '星期';
 
   @override
-  String get startPeriod => '開始節次';
+  String get startPeriod => '開始時間';
 
   @override
-  String get endPeriod => '結束節次';
+  String get endPeriod => '結束時間';
 
   @override
   String get startWeek => '開始週';
@@ -1842,8 +2008,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get weekNumberValidation => '請輸入 1-30';
 
   @override
-  String courseSaved(String course, int weekday, int start, int end) {
-    return '已儲存 $course：星期 $weekday，第 $start-$end 節。';
+  String get timeValidation => '請使用 HH:mm，且結束時間晚於開始時間。';
+
+  @override
+  String courseSaved(String course, int weekday, String start, String end) {
+    return '已儲存 $course：星期 $weekday，$start-$end。';
   }
 
   @override
@@ -1863,6 +2032,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get chooseFile => '選擇檔案';
+
+  @override
+  String get pasteExamSchedule => '貼上考試安排';
+
+  @override
+  String get pasteExamScheduleHint => '貼上從教務系統考試安排表複製的文字。';
+
+  @override
+  String get importExamSchedule => '匯入考試安排';
 
   @override
   String get loadSample => '載入範例';
@@ -1893,6 +2071,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
+  String skippedCount(int count) {
+    return '$count 筆跳過';
+  }
+
+  @override
+  String examParsedCount(int count) {
+    return '$count 筆考試安排';
+  }
+
+  @override
   String changeCount(int count) {
     return '$count 處變更';
   }
@@ -1916,6 +2104,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String committedSummary(int added, int diffs, int conflicts) {
     return '已加入 $added 個新安排；$diffs 處變更和 $conflicts 個時間重疊可繼續確認。';
+  }
+
+  @override
+  String examImportCommittedSummary(int added, int skipped) {
+    return '已匯入 $added 筆考試安排，跳過 $skipped 筆重複記錄。';
   }
 
   @override
@@ -1979,6 +2172,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get weeks => '週次';
+
+  @override
+  String get examRound => '考試輪次';
+
+  @override
+  String get examTime => '考試時間';
+
+  @override
+  String get seatNumber => '座位號';
 
   @override
   String get recentBatches => '最近匯入';
@@ -2195,13 +2397,39 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get localDataSubtitle => '課表、匯入記錄和提醒設定只保存在本機。';
 
   @override
+  String get backupLocalData => '備份到本地';
+
+  @override
+  String get restoreLocalData => '從備份還原';
+
+  @override
+  String backupCreated(String path) {
+    return '備份已儲存到 $path';
+  }
+
+  @override
+  String get backupRestored => '資料和設定已還原。';
+
+  @override
+  String localDataActionFailed(Object error) {
+    return '本地資料操作失敗：$error';
+  }
+
+  @override
   String get offlineAppSubtitle => '無需登入；課表和提醒都在本機處理。';
 
   @override
-  String get thirdPartyLicenses => '第三方開源授權';
+  String get thirdPartyLicenses => '開放原始碼授權';
 
   @override
-  String get thirdPartyLicensesSubtitle => '查看 Flutter 和相依套件的開源授權。';
+  String get thirdPartyLicensesSubtitle => '查看課格、Flutter 和相依套件的開放原始碼授權。';
+
+  @override
+  String get appLicenseDisplayName => '課格（Crid）';
+
+  @override
+  String get appLicenseSummary =>
+      '課格（Crid）採用 Apache License 2.0 開放原始碼授權；散布時請保留 LICENSE 和 NOTICE 中的歸屬聲明。';
 
   @override
   String get reminders => '課程提醒';
@@ -2276,6 +2504,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String minutesShort(int minutes) {
     return '$minutes 分鐘';
   }
+
+  @override
+  String get customReminderTime => '自訂時間';
+
+  @override
+  String get minutesBeforeClass => '上課前';
+
+  @override
+  String get minutesUnit => '分鐘';
+
+  @override
+  String get ignoreDoNotDisturb => '忽略勿擾模式';
+
+  @override
+  String get ignoreDoNotDisturbSubtitle => 'Android 會開啟系統授權頁；授權後提醒頻道可繞過勿擾模式。';
+
+  @override
+  String get vibrateReminder => '關閉提醒聲音';
+
+  @override
+  String get vibrateReminderSubtitle => '課程提醒仍會振動，但不播放提示音。';
 
   @override
   String get goToToday => '回到今天';

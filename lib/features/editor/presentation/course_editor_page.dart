@@ -1,6 +1,7 @@
 import 'package:crid/app/app_state.dart';
 import 'package:crid/app/motion.dart';
 import 'package:crid/core/theme/course_colors.dart';
+import 'package:crid/core/time/period.dart';
 import 'package:crid/features/timetable/data/timetable_repository.dart';
 import 'package:crid/features/timetable/presentation/course_slot_model.dart';
 import 'package:crid/l10n/l10n.dart';
@@ -23,25 +24,30 @@ class _CourseEditorPageState extends ConsumerState<CourseEditorPage> {
   final _nameController = TextEditingController();
   final _teacherController = TextEditingController();
   final _locationController = TextEditingController();
+  final _startTimeController = TextEditingController(text: '08:00');
+  final _endTimeController = TextEditingController(text: '09:40');
   final _startWeekController = TextEditingController(text: '1');
   final _endWeekController = TextEditingController(text: '16');
   final _notesController = TextEditingController();
 
   int _weekday = 1;
-  int _startPeriod = 1;
-  int _endPeriod = 2;
   WeekParity _parity = WeekParity.all;
   bool _hidden = false;
   int? _courseId;
   int? _sessionId;
+  int? _examId;
   Color _color = courseColorForIndex(0);
   var _hydrated = false;
+
+  bool get _editingExam => _examId != null;
 
   @override
   void dispose() {
     _nameController.dispose();
     _teacherController.dispose();
     _locationController.dispose();
+    _startTimeController.dispose();
+    _endTimeController.dispose();
     _startWeekController.dispose();
     _endWeekController.dispose();
     _notesController.dispose();
@@ -77,7 +83,7 @@ class _CourseEditorPageState extends ConsumerState<CourseEditorPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _sessionId == null
+                    _sessionId == null && !_editingExam
                         ? context.l10n.newCourse
                         : context.l10n.editCourse,
                     style: Theme.of(context).textTheme.titleMedium,
@@ -119,7 +125,7 @@ class _CourseEditorPageState extends ConsumerState<CourseEditorPage> {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        if (_sessionId != null)
+                        if (_sessionId != null || _editingExam)
                           OutlinedButton.icon(
                             onPressed: _delete,
                             icon: const Icon(Icons.delete_outline),
@@ -215,22 +221,9 @@ class _CourseEditorPageState extends ConsumerState<CourseEditorPage> {
             Expanded(
               child: _labeledField(
                 label: context.l10n.startPeriod,
-                child: DropdownButtonFormField<int>(
-                  initialValue: _startPeriod,
-                  dropdownColor: Theme.of(
-                    context,
-                  ).colorScheme.surfaceContainerHigh,
-                  borderRadius: appMenuPanelBorderRadius,
-                  decoration: const InputDecoration(),
-                  items: _periodItems,
-                  onChanged: (value) {
-                    setState(() {
-                      _startPeriod = value ?? _startPeriod;
-                      if (_endPeriod < _startPeriod) {
-                        _endPeriod = _startPeriod;
-                      }
-                    });
-                  },
+                child: _timeField(
+                  controller: _startTimeController,
+                  validator: _startTime,
                 ),
               ),
             ),
@@ -238,22 +231,9 @@ class _CourseEditorPageState extends ConsumerState<CourseEditorPage> {
             Expanded(
               child: _labeledField(
                 label: context.l10n.endPeriod,
-                child: DropdownButtonFormField<int>(
-                  initialValue: _endPeriod,
-                  dropdownColor: Theme.of(
-                    context,
-                  ).colorScheme.surfaceContainerHigh,
-                  borderRadius: appMenuPanelBorderRadius,
-                  decoration: const InputDecoration(),
-                  items: _periodItems,
-                  onChanged: (value) {
-                    setState(() {
-                      _endPeriod = value ?? _endPeriod;
-                      if (_startPeriod > _endPeriod) {
-                        _startPeriod = _endPeriod;
-                      }
-                    });
-                  },
+                child: _timeField(
+                  controller: _endTimeController,
+                  validator: _endTime,
                 ),
               ),
             ),
@@ -316,6 +296,21 @@ class _CourseEditorPageState extends ConsumerState<CourseEditorPage> {
     );
   }
 
+  Widget _timeField({
+    required TextEditingController controller,
+    required String? Function(String?) validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: TextInputType.datetime,
+      decoration: const InputDecoration(
+        hintText: 'HH:mm',
+        prefixIcon: Icon(Icons.schedule_outlined),
+      ),
+      validator: validator,
+    );
+  }
+
   Widget _labeledField({required String label, required Widget child}) {
     final colorScheme = Theme.of(context).colorScheme;
     return Column(
@@ -350,30 +345,66 @@ class _CourseEditorPageState extends ConsumerState<CourseEditorPage> {
     return null;
   }
 
+  String? _startTime(String? value) {
+    return _parseMinuteOfDay(value, allowEndOfDay: false) == null
+        ? context.l10n.timeValidation
+        : null;
+  }
+
+  String? _endTime(String? value) {
+    final start = _parseMinuteOfDay(
+      _startTimeController.text,
+      allowEndOfDay: false,
+    );
+    final end = _parseMinuteOfDay(value, allowEndOfDay: true);
+    if (start == null || end == null || end <= start) {
+      return context.l10n.timeValidation;
+    }
+    return null;
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    await ref
-        .read(timetableControllerProvider.notifier)
-        .saveCourse(
-          CourseSlotDraft(
-            courseId: _courseId,
-            sessionId: _sessionId,
-            name: _nameController.text.trim(),
-            teacher: _teacherController.text.trim(),
-            location: _locationController.text.trim(),
-            weekday: _weekday,
-            startPeriod: _startPeriod,
-            endPeriod: _endPeriod,
-            startWeek: int.parse(_startWeekController.text),
-            endWeek: int.parse(_endWeekController.text),
-            parity: _parity,
-            color: _color,
-            notes: _notesController.text.trim(),
-            hidden: _hidden,
-          ),
-        );
+    final timeRange = _timeRangeFromControllers();
+    if (timeRange == null) {
+      return;
+    }
+    final controller = ref.read(timetableControllerProvider.notifier);
+    if (_editingExam) {
+      await controller.saveExam(
+        ExamSlotDraft(
+          examId: _examId,
+          name: _nameController.text.trim(),
+          examRound: _teacherController.text.trim(),
+          location: _locationController.text.trim(),
+          weekday: _weekday,
+          timeRange: timeRange,
+          semesterWeek: int.parse(_startWeekController.text),
+          notes: _notesController.text.trim(),
+          hidden: _hidden,
+        ),
+      );
+    } else {
+      await controller.saveCourse(
+        CourseSlotDraft(
+          courseId: _courseId,
+          sessionId: _sessionId,
+          name: _nameController.text.trim(),
+          teacher: _teacherController.text.trim(),
+          location: _locationController.text.trim(),
+          weekday: _weekday,
+          timeRange: timeRange,
+          startWeek: int.parse(_startWeekController.text),
+          endWeek: int.parse(_endWeekController.text),
+          parity: _parity,
+          color: _color,
+          notes: _notesController.text.trim(),
+          hidden: _hidden,
+        ),
+      );
+    }
     if (!mounted) {
       return;
     }
@@ -383,8 +414,8 @@ class _CourseEditorPageState extends ConsumerState<CourseEditorPage> {
           context.l10n.courseSaved(
             _nameController.text.trim(),
             _weekday,
-            _startPeriod,
-            _endPeriod,
+            _minuteLabel(timeRange.startMinuteOfDay),
+            _minuteLabel(timeRange.endMinuteOfDay),
           ),
         ),
       ),
@@ -393,19 +424,53 @@ class _CourseEditorPageState extends ConsumerState<CourseEditorPage> {
   }
 
   Future<void> _delete() async {
+    final examId = _examId;
+    if (examId != null) {
+      final timeRange =
+          _timeRangeFromControllers() ?? CourseTimeRange.fromPeriods(1, 2);
+      final controller = ref.read(timetableControllerProvider.notifier);
+      final restoreDraft = ExamSlotDraft(
+        name: _nameController.text.trim(),
+        examRound: _teacherController.text.trim(),
+        location: _locationController.text.trim(),
+        weekday: _weekday,
+        timeRange: timeRange,
+        semesterWeek: int.tryParse(_startWeekController.text) ?? 1,
+        notes: _notesController.text.trim(),
+        hidden: false,
+      );
+      await controller.deleteExam(examId);
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.courseSessionDeleted),
+          action: SnackBarAction(
+            label: context.l10n.restore,
+            onPressed: () {
+              controller.saveExam(restoreDraft);
+            },
+          ),
+        ),
+      );
+      _returnToOrigin();
+      return;
+    }
     final courseId = _courseId;
     final sessionId = _sessionId;
     if (courseId == null || sessionId == null) {
       return;
     }
+    final timeRange =
+        _timeRangeFromControllers() ?? CourseTimeRange.fromPeriods(1, 2);
     final controller = ref.read(timetableControllerProvider.notifier);
     final restoreDraft = CourseSlotDraft(
       name: _nameController.text.trim(),
       teacher: _teacherController.text.trim(),
       location: _locationController.text.trim(),
       weekday: _weekday,
-      startPeriod: _startPeriod,
-      endPeriod: _endPeriod,
+      timeRange: timeRange,
       startWeek: int.tryParse(_startWeekController.text) ?? 1,
       endWeek: int.tryParse(_endWeekController.text) ?? 1,
       parity: _parity,
@@ -447,6 +512,7 @@ class _CourseEditorPageState extends ConsumerState<CourseEditorPage> {
   void _loadSlot(CourseSlot slot) {
     _courseId = slot.courseId;
     _sessionId = slot.sessionId;
+    _examId = slot.examId;
     _nameController.text = slot.name;
     _teacherController.text = slot.teacher;
     _locationController.text = slot.location;
@@ -454,28 +520,29 @@ class _CourseEditorPageState extends ConsumerState<CourseEditorPage> {
     _endWeekController.text = '${slot.endWeek}';
     _notesController.text = slot.notes;
     _weekday = slot.weekday;
-    _startPeriod = slot.startPeriod;
-    _endPeriod = slot.endPeriod;
+    _startTimeController.text = _minuteLabel(slot.startMinuteOfDay);
+    _endTimeController.text = _minuteLabel(slot.endMinuteOfDay);
     _parity = slot.parity;
     _color = slot.color;
+    _hidden = slot.hidden;
     _hydrated = true;
   }
-}
 
-const _periodItems = [
-  DropdownMenuItem(value: 1, child: Text('1')),
-  DropdownMenuItem(value: 2, child: Text('2')),
-  DropdownMenuItem(value: 3, child: Text('3')),
-  DropdownMenuItem(value: 4, child: Text('4')),
-  DropdownMenuItem(value: 5, child: Text('5')),
-  DropdownMenuItem(value: 6, child: Text('6')),
-  DropdownMenuItem(value: 7, child: Text('7')),
-  DropdownMenuItem(value: 8, child: Text('8')),
-  DropdownMenuItem(value: 9, child: Text('9')),
-  DropdownMenuItem(value: 10, child: Text('10')),
-  DropdownMenuItem(value: 11, child: Text('11')),
-  DropdownMenuItem(value: 12, child: Text('12')),
-];
+  CourseTimeRange? _timeRangeFromControllers() {
+    final start = _parseMinuteOfDay(
+      _startTimeController.text,
+      allowEndOfDay: false,
+    );
+    final end = _parseMinuteOfDay(_endTimeController.text, allowEndOfDay: true);
+    if (start == null || end == null || end <= start) {
+      return null;
+    }
+    return CourseTimeRange.fromClockTimes(
+      startMinuteOfDay: start,
+      endMinuteOfDay: end,
+    );
+  }
+}
 
 List<DropdownMenuItem<int>> _weekdayItems(BuildContext context) {
   final l10n = context.l10n;
@@ -492,6 +559,29 @@ List<DropdownMenuItem<int>> _weekdayItems(BuildContext context) {
     for (var index = 0; index < labels.length; index++)
       DropdownMenuItem(value: index + 1, child: Text(labels[index])),
   ];
+}
+
+int? _parseMinuteOfDay(String? value, {required bool allowEndOfDay}) {
+  final match = RegExp(r'^(\d{1,2}):(\d{2})$').firstMatch(value?.trim() ?? '');
+  if (match == null) {
+    return null;
+  }
+  final hour = int.parse(match.group(1)!);
+  final minute = int.parse(match.group(2)!);
+  if (minute > 59 || hour > 24) {
+    return null;
+  }
+  if (hour == 24 && (minute != 0 || !allowEndOfDay)) {
+    return null;
+  }
+  return hour * 60 + minute;
+}
+
+String _minuteLabel(int minuteOfDay) {
+  final hour = minuteOfDay ~/ 60;
+  final minute = minuteOfDay % 60;
+  return '${hour.toString().padLeft(2, '0')}:'
+      '${minute.toString().padLeft(2, '0')}';
 }
 
 extension _FirstOrNull<T> on Iterable<T> {

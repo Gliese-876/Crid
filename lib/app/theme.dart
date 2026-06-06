@@ -1,4 +1,5 @@
 import 'package:crid/app/motion.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 ThemeData buildAppTheme(Brightness brightness) {
@@ -132,6 +133,22 @@ ThemeData buildAppTheme(Brightness brightness) {
     ),
     menuTheme: MenuThemeData(style: _menuPanelStyle(colorScheme)),
     menuBarTheme: MenuBarThemeData(style: _menuPanelStyle(colorScheme)),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: colorScheme.surfaceContainerHigh,
+      modalBackgroundColor: colorScheme.surfaceContainerHigh,
+      surfaceTintColor: Colors.transparent,
+      elevation: 3,
+      modalElevation: 3,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: colorScheme.surfaceContainerHigh,
+      surfaceTintColor: Colors.transparent,
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+    ),
     dropdownMenuTheme: DropdownMenuThemeData(
       menuStyle: _menuPanelStyle(colorScheme),
     ),
@@ -194,6 +211,16 @@ ThemeData buildAppTheme(Brightness brightness) {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
     ),
   );
+}
+
+Color appModalScrimColor(ColorScheme colorScheme) {
+  final alpha = colorScheme.brightness == Brightness.light ? 0.32 : 0.56;
+  final tintAlpha = colorScheme.brightness == Brightness.light ? 0.08 : 0.12;
+  final tintedScrim = Color.alphaBlend(
+    colorScheme.primary.withValues(alpha: tintAlpha),
+    colorScheme.scrim,
+  );
+  return tintedScrim.withValues(alpha: alpha);
 }
 
 MenuStyle _menuPanelStyle(ColorScheme colorScheme) {

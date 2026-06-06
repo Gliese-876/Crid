@@ -1,5 +1,10 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:crid/app/app_state.dart';
 import 'package:crid/app/motion.dart';
+import 'package:crid/app/theme.dart';
+import 'package:crid/core/time/period.dart';
 import 'package:crid/core/theme/course_colors.dart';
 import 'package:crid/features/settings/data/china_holiday_service.dart';
 import 'package:crid/features/settings/data/holiday_settings_controller.dart';
@@ -11,21 +16,15 @@ import 'package:intl/intl.dart';
 
 import 'course_slot_model.dart';
 
-const _periodNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-const _periodStartTimes = [
-  '08:00',
-  '08:55',
-  '10:00',
-  '10:55',
-  '13:30',
-  '14:25',
-  '15:30',
-  '16:25',
-  '18:00',
-  '18:55',
-  '19:50',
-  '20:45',
-];
+const _timelineStartMinute = 0;
+const _timelineEndMinute = minutesPerDay;
+const _timelineDurationMinutes = _timelineEndMinute - _timelineStartMinute;
+const _minimumCourseBlockHeight = 40.0;
+const _courseBlockVerticalInset = 0.5;
+const _timetableScrollDuration = Duration(milliseconds: 520);
+const _timetableScrollCurve = Easing.emphasizedDecelerate;
+const _courseSheetTransitionDuration = Duration(milliseconds: 340);
+const _courseSheetReverseTransitionDuration = Duration(milliseconds: 220);
 
 class TimetableHomePage extends ConsumerStatefulWidget {
   const TimetableHomePage({super.key});
@@ -37,14 +36,25 @@ class TimetableHomePage extends ConsumerStatefulWidget {
 class _TimetableHomePageState extends ConsumerState<TimetableHomePage> {
   int? _lastSyncedSemesterId;
 
+  void _openCourseDetails(CourseSlot course, {required bool useInlineSheet}) {
+    if (useInlineSheet) {
+      _showCourseDetailsSheet(context, course);
+      return;
+    }
+    _showCourseDetailsDialog(context, course);
+  }
+
   @override
   Widget build(BuildContext context) {
     final snapshot = ref.watch(timetableControllerProvider);
     final snapshotData = snapshot.asData?.value;
+    final autoScrollRequest = ref.watch(timetableAutoScrollRequestProvider);
     final today = DateTime.now();
+    final isSyncingActiveSemester =
+        snapshotData != null &&
+        _lastSyncedSemesterId != snapshotData.activeSemester.id;
 
-    if (snapshotData != null &&
-        _lastSyncedSemesterId != snapshotData.activeSemester.id) {
+    if (isSyncingActiveSemester) {
       _lastSyncedSemesterId = snapshotData.activeSemester.id;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) {
@@ -108,23 +118,54 @@ class _TimetableHomePageState extends ConsumerState<TimetableHomePage> {
     return LayoutBuilder(
       builder: (context, constraints) {
         const bottomPadding = 96.0;
+        const sectionHorizontalPadding = 16.0;
+        final useInlineCourseDetails = constraints.maxWidth < 700;
+        final gridHorizontalPadding = _timetablePageHorizontalPadding(
+          constraints.maxWidth,
+        );
         final gridAvailableHeight = constraints.maxHeight.isFinite
             ? constraints.maxHeight - bottomPadding
             : null;
         return Stack(
           children: [
             ListView(
-              padding: EdgeInsets.fromLTRB(16, 0, 16, bottomPadding),
+              padding: const EdgeInsets.fromLTRB(0, 0, 0, bottomPadding),
               children: [
-                _TimetableGrid(
-                  courses: courses,
-                  firstWeekMonday: firstWeekMonday,
-                  holidaySettings: holidaySettings,
-                  holidaySchedule: holidaySchedule,
-                  availableHeight: gridAvailableHeight,
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: gridHorizontalPadding,
+                  ),
+                  child: _TimetableGrid(
+                    courses: courses,
+                    firstWeekMonday: firstWeekMonday,
+                    holidaySettings: holidaySettings,
+                    holidaySchedule: holidaySchedule,
+                    semesterId: snapshotData?.activeSemester.id,
+                    selectedWeekOverride:
+                        isSyncingActiveSemester && currentWeek != null
+                        ? currentWeek
+                        : null,
+                    autoScrollRequest: autoScrollRequest,
+                    availableHeight: gridAvailableHeight,
+                    onCourseSelected: (course) => _openCourseDetails(
+                      course,
+                      useInlineSheet: useInlineCourseDetails,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
-                _TodayCourseList(courses: todayCourses),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: sectionHorizontalPadding,
+                  ),
+                  child: _TodayCourseList(
+                    courses: todayCourses,
+                    onCourseSelected: (course) => _openCourseDetails(
+                      course,
+                      useInlineSheet: useInlineCourseDetails,
+                    ),
+                  ),
+                ),
               ],
             ),
             Positioned(
@@ -163,6 +204,7 @@ class _TodayWeekButton extends ConsumerWidget {
               key: const ValueKey('today-button'),
               onPressed: () {
                 ref.read(selectedWeekProvider.notifier).setWeek(currentWeek!);
+                ref.read(timetableAutoScrollRequestProvider.notifier).request();
               },
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(18),
@@ -175,16 +217,88 @@ class _TodayWeekButton extends ConsumerWidget {
   }
 }
 
+double _timetablePageHorizontalPadding(double width) {
+  if (!width.isFinite || width < 560) {
+    return 8;
+  }
+  return 12;
+}
+
+HolidayCourseDisplayMode _holidayDisplayMode({
+  required CourseSlot course,
+  required List<DateTime> dates,
+  required HolidaySettings settings,
+  required ChinaHolidaySchedule schedule,
+}) {
+  return holidayCourseDisplayModeForWeekday(
+    weekday: course.weekday,
+    isExam: course.isExam,
+    dates: dates,
+    settings: settings,
+    schedule: schedule,
+  );
+}
+
 bool _isHiddenByHoliday({
   required CourseSlot course,
   required List<DateTime> dates,
   required HolidaySettings settings,
   required ChinaHolidaySchedule schedule,
 }) {
-  if (course.weekday < 1 || course.weekday > dates.length) {
-    return false;
+  return _holidayDisplayMode(
+        course: course,
+        dates: dates,
+        settings: settings,
+        schedule: schedule,
+      ) ==
+      HolidayCourseDisplayMode.hidden;
+}
+
+bool _isMutedByHoliday({
+  required CourseSlot course,
+  required List<DateTime> dates,
+  required HolidaySettings settings,
+  required ChinaHolidaySchedule schedule,
+}) {
+  return _holidayDisplayMode(
+        course: course,
+        dates: dates,
+        settings: settings,
+        schedule: schedule,
+      ) ==
+      HolidayCourseDisplayMode.muted;
+}
+
+int? _earliestCourseStartMinute({
+  required List<CourseSlot> courses,
+  required int week,
+  required List<DateTime> dates,
+  required HolidaySettings settings,
+  required ChinaHolidaySchedule schedule,
+}) {
+  int? earliest;
+  for (final course in courses) {
+    if (!course.isActiveInWeek(week) ||
+        _isHiddenByHoliday(
+          course: course,
+          dates: dates,
+          settings: settings,
+          schedule: schedule,
+        )) {
+      continue;
+    }
+    earliest = earliest == null
+        ? course.startMinuteOfDay
+        : math.min(earliest, course.startMinuteOfDay);
   }
-  return schedule.shouldHide(dates[course.weekday - 1], settings);
+  return earliest;
+}
+
+double _autoScrollOffsetForMinute(int minute, {required double hourHeight}) {
+  return math.max(
+    0,
+    _minuteOffset(minute, hourHeight) + _courseBlockVerticalInset,
+  );
 }
 
 class _TimetableGrid extends ConsumerStatefulWidget {
@@ -193,14 +307,22 @@ class _TimetableGrid extends ConsumerStatefulWidget {
     required this.firstWeekMonday,
     required this.holidaySettings,
     required this.holidaySchedule,
+    required this.semesterId,
+    required this.selectedWeekOverride,
+    required this.autoScrollRequest,
     required this.availableHeight,
+    required this.onCourseSelected,
   });
 
   final List<CourseSlot> courses;
   final DateTime firstWeekMonday;
   final HolidaySettings holidaySettings;
   final ChinaHolidaySchedule holidaySchedule;
+  final int? semesterId;
+  final int? selectedWeekOverride;
+  final int autoScrollRequest;
   final double? availableHeight;
+  final ValueChanged<CourseSlot> onCourseSelected;
 
   @override
   ConsumerState<_TimetableGrid> createState() => _TimetableGridState();
@@ -208,8 +330,17 @@ class _TimetableGrid extends ConsumerStatefulWidget {
 
 class _TimetableGridState extends ConsumerState<_TimetableGrid> {
   late final PageController _pageController;
+  late final ScrollController _timelineScrollController;
   late List<_WeekGridData> _weekGridData;
   late int _visibleWeek;
+  int? _scheduledPageSyncWeek;
+  int _weekAutoScrollGeneration = 0;
+  Timer? _weekAutoScrollFallbackTimer;
+  ValueNotifier<bool>? _pageScrollSettleNotifier;
+  VoidCallback? _pageScrollSettleListener;
+  int? _autoScrolledSemesterId;
+  int? _lastHandledAutoScrollRequest;
+  bool _completedInitialAutoScroll = false;
 
   @override
   void initState() {
@@ -220,6 +351,7 @@ class _TimetableGridState extends ConsumerState<_TimetableGrid> {
         .clamp(1, maxSemesterWeek)
         .toInt();
     _pageController = PageController(initialPage: _visibleWeek - 1);
+    _timelineScrollController = ScrollController();
   }
 
   @override
@@ -228,27 +360,28 @@ class _TimetableGridState extends ConsumerState<_TimetableGrid> {
     if (_shouldRefreshWeekData(oldWidget)) {
       _weekGridData = _buildWeekGridData();
     }
-    final selectedWeek = ref
-        .read(selectedWeekProvider)
-        .clamp(1, maxSemesterWeek)
-        .toInt();
-    _syncPageController(selectedWeek);
+    _syncPageController(_targetSelectedWeek(watch: false));
   }
 
   void _syncPageController(int selectedWeek) {
-    if (selectedWeek == _visibleWeek) {
+    final targetWeek = selectedWeek.clamp(1, maxSemesterWeek).toInt();
+    if (targetWeek == _visibleWeek || _scheduledPageSyncWeek == targetWeek) {
       return;
     }
-    _visibleWeek = selectedWeek;
+    _cancelPendingWeekAutoScroll();
+    _scheduledPageSyncWeek = targetWeek;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_pageController.hasClients) {
+      final week = _scheduledPageSyncWeek;
+      _scheduledPageSyncWeek = null;
+      if (!mounted || week == null || week == _visibleWeek) {
         return;
       }
-      _pageController.animateToPage(
-        selectedWeek - 1,
-        duration: appMicroMotionDuration,
-        curve: appMicroMotionCurve,
-      );
+      if (!_pageController.hasClients) {
+        _syncPageController(week);
+        return;
+      }
+      _visibleWeek = week;
+      _pageController.jumpToPage(week - 1);
     });
   }
 
@@ -288,26 +421,36 @@ class _TimetableGridState extends ConsumerState<_TimetableGrid> {
             ),
           ),
     );
+    final holidayMutedCourseIds = {
+      for (final course in activeCourses)
+        if (_isMutedByHoliday(
+          course: course,
+          dates: dates,
+          settings: widget.holidaySettings,
+          schedule: widget.holidaySchedule,
+        ))
+          course.id,
+    };
     return _WeekGridData(
       week: week,
       dates: List.unmodifiable(dates),
       holidayRestDays: List.unmodifiable(holidayRestDays),
+      holidayMutedCourseIds: Set.unmodifiable(holidayMutedCourseIds),
       layouts: List.unmodifiable(_courseBlockLayouts(activeCourses)),
     );
   }
 
   @override
   void dispose() {
+    _clearWeekAutoScrollWaiters();
     _pageController.dispose();
+    _timelineScrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final selectedWeek = ref
-        .watch(selectedWeekProvider)
-        .clamp(1, maxSemesterWeek)
-        .toInt();
+    final selectedWeek = _targetSelectedWeek(watch: true);
     _syncPageController(selectedWeek);
 
     return LayoutBuilder(
@@ -316,58 +459,328 @@ class _TimetableGridState extends ConsumerState<_TimetableGrid> {
         final gridWidth = constraints.maxWidth > 0
             ? constraints.maxWidth
             : MediaQuery.sizeOf(context).width - 32;
-        final gutterWidth = isCompact ? 42.0 : 64.0;
-        final headerHeight = isCompact ? 46.0 : 50.0;
-        final basePeriodHeight = isCompact ? 76.0 : 84.0;
-        final periodHeight = _periodHeightForViewport(
+        final gutterWidth = isCompact ? 48.0 : 64.0;
+        final headerHeight = _timetableHeaderHeight(isCompact);
+        final hourHeight = _hourHeightForViewport(
           compact: isCompact,
           headerHeight: headerHeight,
-          basePeriodHeight: basePeriodHeight,
+          baseHourHeight: _baseHourHeight(isCompact),
           availableHeight: widget.availableHeight,
         );
         final dayWidth = (gridWidth - gutterWidth) / 7;
-        final gridHeight = headerHeight + periodHeight * _periodNumbers.length;
+        final bodyHeight = _timelineBodyHeight(hourHeight);
+        final desiredGridHeight = headerHeight + bodyHeight;
+        final minGridHeight = headerHeight + (isCompact ? 360.0 : 420.0);
+        final gridHeight =
+            widget.availableHeight != null && widget.availableHeight!.isFinite
+            ? widget.availableHeight!
+                  .clamp(
+                    math.min(minGridHeight, desiredGridHeight),
+                    desiredGridHeight,
+                  )
+                  .toDouble()
+            : desiredGridHeight;
+        final visibleWeekData = _weekGridData[selectedWeek - 1];
+        _maybeScheduleAutoScroll(
+          selectedWeek: selectedWeek,
+          hourHeight: hourHeight,
+        );
 
         return Card(
           clipBehavior: Clip.hardEdge,
           child: SizedBox(
             width: gridWidth,
             height: gridHeight,
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: maxSemesterWeek,
-              allowImplicitScrolling: true,
-              clipBehavior: Clip.hardEdge,
-              onPageChanged: (index) {
-                final week = index + 1;
-                if (week == _visibleWeek) {
-                  return;
-                }
-                _visibleWeek = week;
-                ref.read(selectedWeekProvider.notifier).setWeek(week);
-              },
-              itemBuilder: (context, index) {
-                final weekData = _weekGridData[index];
-                return RepaintBoundary(
-                  child: _TimetableGridPage(
-                    key: ValueKey('week-${weekData.week}'),
-                    layouts: weekData.layouts,
-                    dates: weekData.dates,
-                    holidayRestDays: weekData.holidayRestDays,
-                    width: gridWidth,
-                    gutterWidth: gutterWidth,
-                    dayWidth: dayWidth,
-                    headerHeight: headerHeight,
-                    periodHeight: periodHeight,
-                    compact: isCompact,
+            child: Column(
+              children: [
+                _CalendarGridHeader(
+                  key: ValueKey(
+                    'timetable-date-header-week-${visibleWeekData.week}',
                   ),
-                );
-              },
+                  width: gridWidth,
+                  gutterWidth: gutterWidth,
+                  dayWidth: dayWidth,
+                  headerHeight: headerHeight,
+                  compact: isCompact,
+                  dates: visibleWeekData.dates,
+                  holidayRestDays: visibleWeekData.holidayRestDays,
+                  onDateSelected: () {
+                    _scrollToWeekEarliestCourse(
+                      week: visibleWeekData.week,
+                      hourHeight: hourHeight,
+                      animate: true,
+                    );
+                  },
+                ),
+                Expanded(
+                  child: ScrollConfiguration(
+                    behavior: const _TimetableBodyScrollBehavior(),
+                    child: SingleChildScrollView(
+                      key: const ValueKey('timetable-time-body'),
+                      controller: _timelineScrollController,
+                      child: SizedBox(
+                        width: gridWidth,
+                        height: bodyHeight,
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: ColoredBox(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHigh,
+                              ),
+                            ),
+                            _CalendarTimeColumn(
+                              width: gutterWidth,
+                              hourHeight: hourHeight,
+                              compact: isCompact,
+                            ),
+                            Positioned(
+                              left: gutterWidth,
+                              top: 0,
+                              right: 0,
+                              bottom: 0,
+                              child: PageView.builder(
+                                controller: _pageController,
+                                itemCount: maxSemesterWeek,
+                                allowImplicitScrolling: true,
+                                clipBehavior: Clip.hardEdge,
+                                onPageChanged: (index) {
+                                  final week = index + 1;
+                                  _scheduledPageSyncWeek = null;
+                                  _visibleWeek = week;
+                                  if (ref.read(selectedWeekProvider) != week) {
+                                    ref
+                                        .read(selectedWeekProvider.notifier)
+                                        .setWeek(week);
+                                  }
+                                  _scheduleWeekAutoScrollAfterHorizontalSettle(
+                                    week: week,
+                                    hourHeight: hourHeight,
+                                  );
+                                },
+                                itemBuilder: (context, index) {
+                                  final weekData = _weekGridData[index];
+                                  return RepaintBoundary(
+                                    child: _TimetableGridPage(
+                                      key: ValueKey('week-${weekData.week}'),
+                                      layouts: weekData.layouts,
+                                      holidayRestDays: weekData.holidayRestDays,
+                                      holidayMutedCourseIds:
+                                          weekData.holidayMutedCourseIds,
+                                      width: gridWidth - gutterWidth,
+                                      dayWidth: dayWidth,
+                                      hourHeight: hourHeight,
+                                      compact: isCompact,
+                                      onCourseSelected: widget.onCourseSelected,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         );
       },
     );
+  }
+
+  int _targetSelectedWeek({required bool watch}) {
+    final selectedWeek = watch
+        ? ref.watch(selectedWeekProvider)
+        : ref.read(selectedWeekProvider);
+    return (widget.selectedWeekOverride ?? selectedWeek)
+        .clamp(1, maxSemesterWeek)
+        .toInt();
+  }
+
+  void _maybeScheduleAutoScroll({
+    required int selectedWeek,
+    required double hourHeight,
+  }) {
+    final shouldHandleStartup =
+        widget.semesterId != null &&
+        _autoScrolledSemesterId != widget.semesterId;
+    final shouldHandleRequest =
+        _lastHandledAutoScrollRequest != widget.autoScrollRequest;
+    if (!shouldHandleStartup && !shouldHandleRequest) {
+      return;
+    }
+
+    if (shouldHandleStartup) {
+      _autoScrolledSemesterId = widget.semesterId;
+    }
+    if (shouldHandleRequest) {
+      _lastHandledAutoScrollRequest = widget.autoScrollRequest;
+    }
+
+    final earliestMinute = _earliestCourseStartMinute(
+      courses: widget.courses,
+      week: selectedWeek,
+      dates: _datesForWeek(
+        firstWeekMonday: widget.firstWeekMonday,
+        week: selectedWeek,
+      ),
+      settings: widget.holidaySettings,
+      schedule: widget.holidaySchedule,
+    );
+    if (earliestMinute == null) {
+      return;
+    }
+
+    final targetOffset = _autoScrollOffsetForMinute(
+      earliestMinute,
+      hourHeight: hourHeight,
+    );
+    final animate = _completedInitialAutoScroll;
+    _completedInitialAutoScroll = true;
+    _scheduleTimelineScroll(targetOffset, animate: animate);
+  }
+
+  void _scrollToWeekEarliestCourse({
+    required int week,
+    required double hourHeight,
+    required bool animate,
+  }) {
+    final earliestMinute = _earliestCourseStartMinute(
+      courses: widget.courses,
+      week: week,
+      dates: _datesForWeek(firstWeekMonday: widget.firstWeekMonday, week: week),
+      settings: widget.holidaySettings,
+      schedule: widget.holidaySchedule,
+    );
+    if (earliestMinute == null) {
+      return;
+    }
+    _scheduleTimelineScroll(
+      _autoScrollOffsetForMinute(earliestMinute, hourHeight: hourHeight),
+      animate: animate,
+    );
+  }
+
+  void _scheduleWeekAutoScrollAfterHorizontalSettle({
+    required int week,
+    required double hourHeight,
+  }) {
+    _cancelPendingWeekAutoScroll();
+    final generation = _weekAutoScrollGeneration;
+
+    void tryScroll() {
+      if (!mounted || generation != _weekAutoScrollGeneration) {
+        return;
+      }
+      if (_visibleWeek != week || ref.read(selectedWeekProvider) != week) {
+        return;
+      }
+      if (!_pageController.hasClients ||
+          _pageController.position.isScrollingNotifier.value) {
+        return;
+      }
+      _clearWeekAutoScrollWaiters();
+      _scrollToWeekEarliestCourse(
+        week: week,
+        hourHeight: hourHeight,
+        animate: true,
+      );
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || generation != _weekAutoScrollGeneration) {
+        return;
+      }
+      if (!_pageController.hasClients) {
+        return;
+      }
+      final notifier = _pageController.position.isScrollingNotifier;
+      void listener() {
+        if (!notifier.value) {
+          tryScroll();
+        }
+      }
+
+      _pageScrollSettleNotifier = notifier;
+      _pageScrollSettleListener = listener;
+      notifier.addListener(listener);
+      if (!notifier.value) {
+        tryScroll();
+        return;
+      }
+      _weekAutoScrollFallbackTimer = Timer(
+        _timetableScrollDuration + const Duration(milliseconds: 120),
+        tryScroll,
+      );
+    });
+  }
+
+  void _cancelPendingWeekAutoScroll() {
+    _weekAutoScrollGeneration++;
+    _clearWeekAutoScrollWaiters();
+  }
+
+  void _clearWeekAutoScrollWaiters() {
+    _weekAutoScrollFallbackTimer?.cancel();
+    _weekAutoScrollFallbackTimer = null;
+    final listener = _pageScrollSettleListener;
+    final notifier = _pageScrollSettleNotifier;
+    if (listener != null && notifier != null) {
+      notifier.removeListener(listener);
+    }
+    _pageScrollSettleListener = null;
+    _pageScrollSettleNotifier = null;
+  }
+
+  void _scheduleTimelineScroll(
+    double targetOffset, {
+    required bool animate,
+    int attemptsRemaining = 30,
+  }) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      if (!_timelineScrollController.hasClients) {
+        if (attemptsRemaining > 0) {
+          _scheduleTimelineScroll(
+            targetOffset,
+            animate: animate,
+            attemptsRemaining: attemptsRemaining - 1,
+          );
+        }
+        return;
+      }
+      final position = _timelineScrollController.position;
+      if (targetOffset > position.maxScrollExtent &&
+          position.maxScrollExtent <= position.minScrollExtent &&
+          attemptsRemaining > 0) {
+        _scheduleTimelineScroll(
+          targetOffset,
+          animate: animate,
+          attemptsRemaining: attemptsRemaining - 1,
+        );
+        return;
+      }
+      final target = targetOffset
+          .clamp(position.minScrollExtent, position.maxScrollExtent)
+          .toDouble();
+      final disableAnimations =
+          MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+      if (!animate || disableAnimations) {
+        position.jumpTo(target);
+        return;
+      }
+      _timelineScrollController.animateTo(
+        target,
+        duration: _timetableScrollDuration,
+        curve: _timetableScrollCurve,
+      );
+    });
   }
 }
 
@@ -376,12 +789,14 @@ class _WeekGridData {
     required this.week,
     required this.dates,
     required this.holidayRestDays,
+    required this.holidayMutedCourseIds,
     required this.layouts,
   });
 
   final int week;
   final List<DateTime> dates;
   final List<bool> holidayRestDays;
+  final Set<String> holidayMutedCourseIds;
   final List<_CourseBlockLayout> layouts;
 }
 
@@ -389,25 +804,23 @@ class _TimetableGridPage extends StatefulWidget {
   const _TimetableGridPage({
     super.key,
     required this.layouts,
-    required this.dates,
     required this.holidayRestDays,
+    required this.holidayMutedCourseIds,
     required this.width,
-    required this.gutterWidth,
     required this.dayWidth,
-    required this.headerHeight,
-    required this.periodHeight,
+    required this.hourHeight,
     required this.compact,
+    required this.onCourseSelected,
   });
 
   final List<_CourseBlockLayout> layouts;
-  final List<DateTime> dates;
   final List<bool> holidayRestDays;
+  final Set<String> holidayMutedCourseIds;
   final double width;
-  final double gutterWidth;
   final double dayWidth;
-  final double headerHeight;
-  final double periodHeight;
+  final double hourHeight;
   final bool compact;
+  final ValueChanged<CourseSlot> onCourseSelected;
 
   @override
   State<_TimetableGridPage> createState() => _TimetableGridPageState();
@@ -421,37 +834,35 @@ class _TimetableGridPageState extends State<_TimetableGridPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: ColoredBox(
-            color: Theme.of(context).colorScheme.surfaceContainerHigh,
-          ),
-        ),
-        _CalendarGridChrome(
-          width: widget.width,
-          gutterWidth: widget.gutterWidth,
-          dayWidth: widget.dayWidth,
-          headerHeight: widget.headerHeight,
-          periodHeight: widget.periodHeight,
-          compact: widget.compact,
-          dates: widget.dates,
-          holidayRestDays: widget.holidayRestDays,
-        ),
-        for (final layout in widget.layouts)
-          _CalendarCourseBlock(
-            key: ValueKey(layout.course.id),
-            course: layout.course,
-            overlapIndex: layout.overlapIndex,
-            overlapCount: layout.overlapCount,
-            gutterWidth: widget.gutterWidth,
+    final bodyHeight = _timelineBodyHeight(widget.hourHeight);
+    return SizedBox(
+      width: widget.width,
+      height: bodyHeight,
+      child: Stack(
+        children: [
+          _CalendarGridBody(
+            width: widget.width,
             dayWidth: widget.dayWidth,
-            headerHeight: widget.headerHeight,
-            periodHeight: widget.periodHeight,
-            compact: widget.compact,
-            onTap: () => _showCourseDetails(context, layout.course),
+            hourHeight: widget.hourHeight,
+            holidayRestDays: widget.holidayRestDays,
           ),
-      ],
+          for (final layout in widget.layouts)
+            _CalendarCourseBlock(
+              key: ValueKey(layout.course.id),
+              course: layout.course,
+              overlapIndex: layout.overlapIndex,
+              overlapCount: layout.overlapCount,
+              gutterWidth: 0,
+              dayWidth: widget.dayWidth,
+              hourHeight: widget.hourHeight,
+              compact: widget.compact,
+              mutedByHoliday: widget.holidayMutedCourseIds.contains(
+                layout.course.id,
+              ),
+              onTap: () => widget.onCourseSelected(layout.course),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -468,22 +879,37 @@ class _CourseBlockLayout {
   final int overlapCount;
 }
 
-double _periodHeightForViewport({
+double _timetableHeaderHeight(bool compact) => compact ? 52.0 : 58.0;
+
+double _baseHourHeight(bool compact) => compact ? 64.0 : 72.0;
+
+double _hourHeightForViewport({
   required bool compact,
   required double headerHeight,
-  required double basePeriodHeight,
+  required double baseHourHeight,
   required double? availableHeight,
 }) {
   if (compact || availableHeight == null || !availableHeight.isFinite) {
-    return basePeriodHeight;
+    return baseHourHeight;
   }
 
-  const minDesktopPeriodHeight = 64.0;
-  final fittedPeriodHeight =
-      (availableHeight - headerHeight) / _periodNumbers.length;
-  return fittedPeriodHeight
-      .clamp(minDesktopPeriodHeight, basePeriodHeight)
+  const minDesktopHourHeight = 32.0;
+  final fittedHourHeight =
+      (availableHeight - headerHeight) * 60 / _timelineDurationMinutes;
+  return fittedHourHeight
+      .clamp(minDesktopHourHeight, baseHourHeight)
       .toDouble();
+}
+
+double _timelineBodyHeight(double hourHeight) {
+  return _timelineDurationMinutes * hourHeight / 60;
+}
+
+double _minuteOffset(int minute, double hourHeight) {
+  final visibleMinute = minute
+      .clamp(_timelineStartMinute, _timelineEndMinute)
+      .toInt();
+  return (visibleMinute - _timelineStartMinute) * hourHeight / 60;
 }
 
 List<_CourseBlockLayout> _courseBlockLayouts(List<CourseSlot> courses) {
@@ -503,7 +929,7 @@ List<_CourseBlockLayout> _courseBlockLayouts(List<CourseSlot> courses) {
   for (final dayCourses in coursesByDay.values) {
     final sorted = [...dayCourses]..sort(_compareCourseBlocks);
     var group = <CourseSlot>[];
-    var groupEndPeriod = 0;
+    var groupEndMinute = 0;
 
     void flushGroup() {
       if (group.isEmpty) {
@@ -511,19 +937,17 @@ List<_CourseBlockLayout> _courseBlockLayouts(List<CourseSlot> courses) {
       }
       layouts.addAll(_assignOverlapLanes(group));
       group = <CourseSlot>[];
-      groupEndPeriod = 0;
+      groupEndMinute = 0;
     }
 
     for (final course in sorted) {
-      if (group.isEmpty || course.startPeriod <= groupEndPeriod) {
+      if (group.isEmpty || course.startMinuteOfDay < groupEndMinute) {
         group.add(course);
-        if (course.endPeriod > groupEndPeriod) {
-          groupEndPeriod = course.endPeriod;
-        }
+        groupEndMinute = math.max(groupEndMinute, course.endMinuteOfDay);
       } else {
         flushGroup();
         group.add(course);
-        groupEndPeriod = course.endPeriod;
+        groupEndMinute = course.endMinuteOfDay;
       }
     }
     flushGroup();
@@ -533,11 +957,11 @@ List<_CourseBlockLayout> _courseBlockLayouts(List<CourseSlot> courses) {
 }
 
 int _compareCourseBlocks(CourseSlot a, CourseSlot b) {
-  final byStart = a.startPeriod.compareTo(b.startPeriod);
+  final byStart = a.startMinuteOfDay.compareTo(b.startMinuteOfDay);
   if (byStart != 0) {
     return byStart;
   }
-  final byEnd = b.endPeriod.compareTo(a.endPeriod);
+  final byEnd = b.endMinuteOfDay.compareTo(a.endMinuteOfDay);
   if (byEnd != 0) {
     return byEnd;
   }
@@ -545,23 +969,23 @@ int _compareCourseBlocks(CourseSlot a, CourseSlot b) {
 }
 
 List<_CourseBlockLayout> _assignOverlapLanes(List<CourseSlot> group) {
-  final laneEndPeriods = <int>[];
+  final laneEndMinutes = <int>[];
   final laneByCourse = <CourseSlot, int>{};
 
   for (final course in group) {
-    final lane = laneEndPeriods.indexWhere(
-      (endPeriod) => endPeriod < course.startPeriod,
+    final lane = laneEndMinutes.indexWhere(
+      (endMinute) => endMinute <= course.startMinuteOfDay,
     );
     if (lane == -1) {
-      laneByCourse[course] = laneEndPeriods.length;
-      laneEndPeriods.add(course.endPeriod);
+      laneByCourse[course] = laneEndMinutes.length;
+      laneEndMinutes.add(course.endMinuteOfDay);
     } else {
       laneByCourse[course] = lane;
-      laneEndPeriods[lane] = course.endPeriod;
+      laneEndMinutes[lane] = course.endMinuteOfDay;
     }
   }
 
-  final overlapCount = laneEndPeriods.length;
+  final overlapCount = laneEndMinutes.length;
   return [
     for (final course in group)
       _CourseBlockLayout(
@@ -572,34 +996,32 @@ List<_CourseBlockLayout> _assignOverlapLanes(List<CourseSlot> group) {
   ];
 }
 
-class _CalendarGridChrome extends StatelessWidget {
-  const _CalendarGridChrome({
+class _CalendarGridHeader extends StatelessWidget {
+  const _CalendarGridHeader({
+    super.key,
     required this.width,
     required this.gutterWidth,
     required this.dayWidth,
     required this.headerHeight,
-    required this.periodHeight,
     required this.compact,
     required this.dates,
     required this.holidayRestDays,
+    required this.onDateSelected,
   });
 
   final double width;
   final double gutterWidth;
   final double dayWidth;
   final double headerHeight;
-  final double periodHeight;
   final bool compact;
   final List<DateTime> dates;
   final List<bool> holidayRestDays;
+  final VoidCallback onDateSelected;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final outline = colorScheme.outlineVariant;
-    final timeColumnColor = colorScheme.brightness == Brightness.light
-        ? colorScheme.surfaceContainerLow
-        : colorScheme.surfaceContainerHighest;
     final dayLabels = compact
         ? _compactDayLabels(context)
         : _dayLabels(context);
@@ -607,34 +1029,9 @@ class _CalendarGridChrome extends StatelessWidget {
 
     return Stack(
       children: [
-        Positioned(
-          left: 0,
-          top: 0,
-          width: width,
-          height: headerHeight,
+        SizedBox(width: width, height: headerHeight),
+        Positioned.fill(
           child: ColoredBox(color: colorScheme.surfaceContainerHighest),
-        ),
-        Positioned(
-          left: 0,
-          top: 0,
-          width: gutterWidth,
-          height: headerHeight,
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  monthLabel,
-                  maxLines: 1,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ),
-          ),
         ),
         for (var day = 0; day < DateTime.daysPerWeek; day++)
           if (_isHolidayRestDay(holidayRestDays, day))
@@ -643,9 +1040,39 @@ class _CalendarGridChrome extends StatelessWidget {
               left: gutterWidth + dayWidth * day,
               top: 0,
               width: dayWidth,
-              height: headerHeight + periodHeight * _periodNumbers.length,
+              height: headerHeight,
               child: ColoredBox(color: _holidayRestColumnColor(colorScheme)),
             ),
+        Positioned(
+          left: 0,
+          top: 0,
+          width: gutterWidth,
+          height: headerHeight,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(
+                right: BorderSide(color: outline),
+                bottom: BorderSide(color: outline),
+              ),
+            ),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    monthLabel,
+                    maxLines: 1,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
         for (var day = 0; day < dayLabels.length; day++)
           Positioned(
             left: gutterWidth + dayWidth * day,
@@ -657,55 +1084,150 @@ class _CalendarGridChrome extends StatelessWidget {
               date: dates[day],
               holidayRestDay: _isHolidayRestDay(holidayRestDays, day),
               compact: compact,
+              onTap: onDateSelected,
             ),
-          ),
-        for (var index = 0; index < _periodNumbers.length; index++)
-          Positioned(
-            left: 0,
-            top: headerHeight + periodHeight * index,
-            width: gutterWidth,
-            height: periodHeight,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: timeColumnColor,
-                border: Border(
-                  right: BorderSide(color: outline),
-                  bottom: BorderSide(color: outline),
-                ),
-              ),
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: compact ? 2 : 6),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '${_periodNumbers[index]}',
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                    Text(
-                      _periodStartTimes[index],
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.labelSmall,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        for (var row = 0; row <= _periodNumbers.length; row++)
-          Positioned(
-            left: gutterWidth,
-            top: headerHeight + periodHeight * row,
-            width: width - gutterWidth,
-            height: 1,
-            child: ColoredBox(color: outline),
           ),
         for (var day = 0; day <= 7; day++)
           Positioned(
             left: gutterWidth + dayWidth * day,
             top: 0,
             width: 1,
-            height: headerHeight + periodHeight * _periodNumbers.length,
+            height: headerHeight,
+            child: ColoredBox(color: outline),
+          ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 1,
+          child: ColoredBox(color: outline),
+        ),
+      ],
+    );
+  }
+}
+
+class _CalendarTimeColumn extends StatelessWidget {
+  const _CalendarTimeColumn({
+    required this.width,
+    required this.hourHeight,
+    required this.compact,
+  });
+
+  final double width;
+  final double hourHeight;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final outline = colorScheme.outlineVariant;
+    final timeColumnColor = colorScheme.brightness == Brightness.light
+        ? colorScheme.surfaceContainerLow
+        : colorScheme.surfaceContainerHighest;
+    final bodyHeight = _timelineBodyHeight(hourHeight);
+
+    return SizedBox(
+      width: width,
+      height: bodyHeight,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: timeColumnColor,
+                border: Border(right: BorderSide(color: outline)),
+              ),
+            ),
+          ),
+          for (final segment in _timeColumnSegments(compact: compact))
+            Positioned(
+              key: ValueKey(segment.key),
+              left: 0,
+              top: _minuteOffset(segment.startMinute, hourHeight),
+              width: width,
+              height:
+                  _minuteOffset(segment.endMinute, hourHeight) -
+                  _minuteOffset(segment.startMinute, hourHeight),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: timeColumnColor,
+                  border: Border(
+                    top: BorderSide(color: outline),
+                    right: BorderSide(color: outline),
+                    bottom: BorderSide(color: outline),
+                  ),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: compact ? 2 : 6),
+                  child: Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        segment.label,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          height: 1.1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CalendarGridBody extends StatelessWidget {
+  const _CalendarGridBody({
+    required this.width,
+    required this.dayWidth,
+    required this.hourHeight,
+    required this.holidayRestDays,
+  });
+
+  final double width;
+  final double dayWidth;
+  final double hourHeight;
+  final List<bool> holidayRestDays;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final outline = colorScheme.outlineVariant;
+    final bodyHeight = _timelineBodyHeight(hourHeight);
+    final guideMinutes = _timelineGuideMinutes();
+
+    return Stack(
+      children: [
+        for (var day = 0; day < DateTime.daysPerWeek; day++)
+          if (_isHolidayRestDay(holidayRestDays, day))
+            Positioned(
+              key: ValueKey('holiday-rest-body-column-${day + 1}'),
+              left: dayWidth * day,
+              top: 0,
+              width: dayWidth,
+              height: bodyHeight,
+              child: ColoredBox(color: _holidayRestColumnColor(colorScheme)),
+            ),
+        for (final minute in guideMinutes)
+          Positioned(
+            left: 0,
+            top: _minuteOffset(minute, hourHeight),
+            width: width,
+            height: 1,
+            child: ColoredBox(color: outline),
+          ),
+        for (var day = 0; day <= 7; day++)
+          Positioned(
+            left: dayWidth * day,
+            top: 0,
+            width: 1,
+            height: bodyHeight,
             child: ColoredBox(color: outline),
           ),
       ],
@@ -721,9 +1243,9 @@ class _CalendarCourseBlock extends StatelessWidget {
     required this.overlapCount,
     required this.gutterWidth,
     required this.dayWidth,
-    required this.headerHeight,
-    required this.periodHeight,
+    required this.hourHeight,
     required this.compact,
+    required this.mutedByHoliday,
     required this.onTap,
   });
 
@@ -732,9 +1254,9 @@ class _CalendarCourseBlock extends StatelessWidget {
   final int overlapCount;
   final double gutterWidth;
   final double dayWidth;
-  final double headerHeight;
-  final double periodHeight;
+  final double hourHeight;
   final bool compact;
+  final bool mutedByHoliday;
   final VoidCallback onTap;
 
   @override
@@ -742,8 +1264,6 @@ class _CalendarCourseBlock extends StatelessWidget {
     if (course.weekday < 1 || course.weekday > 7) {
       return const SizedBox.shrink();
     }
-    final start = course.startPeriod.clamp(1, _periodNumbers.length).toInt();
-    final end = course.endPeriod.clamp(start, _periodNumbers.length).toInt();
     final columnCount = overlapCount < 1 ? 1 : overlapCount;
     final columnIndex = overlapIndex.clamp(0, columnCount - 1).toInt();
     final columnGap = columnCount > 1 ? 2.0 : 0.0;
@@ -755,8 +1275,20 @@ class _CalendarCourseBlock extends StatelessWidget {
         dayWidth * (course.weekday - 1) +
         2 +
         (width + columnGap) * columnIndex;
-    final top = headerHeight + periodHeight * (start - 1) + 2;
-    final height = periodHeight * (end - start + 1) - 4;
+    final startMinute = course.startMinuteOfDay
+        .clamp(_timelineStartMinute, _timelineEndMinute - 1)
+        .toInt();
+    final endMinute = course.endMinuteOfDay
+        .clamp(startMinute + 1, _timelineEndMinute)
+        .toInt();
+    final top =
+        _minuteOffset(startMinute, hourHeight) + _courseBlockVerticalInset;
+    final height = math.max(
+      _minimumCourseBlockHeight,
+      _minuteOffset(endMinute, hourHeight) -
+          _minuteOffset(startMinute, hourHeight) -
+          _courseBlockVerticalInset * 2,
+    );
 
     final disableAnimations =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
@@ -768,7 +1300,12 @@ class _CalendarCourseBlock extends StatelessWidget {
       top: top,
       width: width,
       height: height,
-      child: _CourseCard(course: course, compact: compact, onTap: onTap),
+      child: _CourseCard(
+        course: course,
+        compact: compact,
+        mutedByHoliday: mutedByHoliday,
+        onTap: onTap,
+      ),
     );
   }
 }
@@ -779,12 +1316,14 @@ class _DayHeaderCell extends StatelessWidget {
     required this.date,
     required this.holidayRestDay,
     required this.compact,
+    required this.onTap,
   });
 
   final String label;
   final DateTime date;
   final bool holidayRestDay;
   final bool compact;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -808,25 +1347,28 @@ class _DayHeaderCell extends StatelessWidget {
       fontWeight: isToday || holidayRestDay ? FontWeight.w700 : null,
     );
 
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(label, style: labelStyle, overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 2),
-          AnimatedContainer(
-            duration: appMicroMotionDuration,
-            curve: appMicroMotionCurve,
-            width: badgeSize,
-            height: badgeSize,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: isToday ? colorScheme.primary : Colors.transparent,
-              shape: BoxShape.circle,
+    return InkWell(
+      onTap: onTap,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(label, style: labelStyle, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 2),
+            AnimatedContainer(
+              duration: appMicroMotionDuration,
+              curve: appMicroMotionCurve,
+              width: badgeSize,
+              height: badgeSize,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: isToday ? colorScheme.primary : Colors.transparent,
+                shape: BoxShape.circle,
+              ),
+              child: Text('${date.day}', style: dateStyle),
             ),
-            child: Text('${date.day}', style: dateStyle),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -847,16 +1389,24 @@ class _CourseCard extends StatelessWidget {
   const _CourseCard({
     required this.course,
     required this.compact,
+    required this.mutedByHoliday,
     required this.onTap,
   });
 
   final CourseSlot course;
   final bool compact;
+  final bool mutedByHoliday;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final textColor = readableCourseTextColor(course.color);
+    final colorScheme = Theme.of(context).colorScheme;
+    final backgroundColor = mutedByHoliday
+        ? _holidayMutedCourseColor(colorScheme)
+        : course.color;
+    final textColor = mutedByHoliday
+        ? colorScheme.onSurfaceVariant
+        : readableCourseTextColor(course.color);
     const borderRadius = BorderRadius.all(Radius.circular(8));
     final semanticParts = [
       course.name,
@@ -865,104 +1415,127 @@ class _CourseCard extends StatelessWidget {
     ].where((part) => part.trim().isNotEmpty).join(', ');
 
     return Material(
-      color: course.color,
+      color: backgroundColor,
       borderRadius: borderRadius,
       clipBehavior: Clip.antiAlias,
-      child: Semantics(
-        button: true,
-        label: semanticParts,
-        child: InkWell(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
           borderRadius: borderRadius,
-          onTap: onTap,
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: compact ? 4 : 7,
-              vertical: compact ? 3 : 6,
-            ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final details = [
-                  course.location.trim(),
-                  course.teacher.trim(),
-                ].where((part) => part.isNotEmpty).toList();
-                final titleUpperBound = (constraints.maxHeight - 2)
-                    .clamp(0.0, constraints.maxHeight)
-                    .toDouble();
-                final titleMaxHeight = details.isEmpty
-                    ? constraints.maxHeight
-                    : (constraints.maxHeight * 0.55)
-                          .clamp(0.0, titleUpperBound)
-                          .toDouble();
-                final titleStyle = TextStyle(
-                  fontSize: compact ? 11 : null,
-                  fontWeight: FontWeight.w700,
-                  height: 1.08,
-                  color: textColor,
-                );
-                final detailStyle = TextStyle(
-                  fontSize: compact ? 10 : null,
-                  fontWeight: FontWeight.w500,
-                  height: 1.08,
-                  color: textColor,
-                );
+          border: mutedByHoliday
+              ? Border.all(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.72),
+                )
+              : null,
+        ),
+        child: Semantics(
+          button: true,
+          label: semanticParts,
+          child: InkWell(
+            borderRadius: borderRadius,
+            onTap: onTap,
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 4 : 7,
+                vertical: compact ? 3 : 6,
+              ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final details = [
+                    course.location.trim(),
+                    course.teacher.trim(),
+                  ].where((part) => part.isNotEmpty).toList();
+                  final titleUpperBound = (constraints.maxHeight - 2)
+                      .clamp(0.0, constraints.maxHeight)
+                      .toDouble();
+                  final titleMaxHeight = details.isEmpty
+                      ? constraints.maxHeight
+                      : (constraints.maxHeight * 0.55)
+                            .clamp(0.0, titleUpperBound)
+                            .toDouble();
+                  final titleStyle = TextStyle(
+                    fontSize: compact ? 11 : null,
+                    fontWeight: FontWeight.w700,
+                    height: 1.08,
+                    color: textColor,
+                  );
+                  final detailStyle = TextStyle(
+                    fontSize: compact ? 10 : null,
+                    fontWeight: FontWeight.w500,
+                    height: 1.08,
+                    color: textColor,
+                  );
 
-                return ClipRect(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ConstrainedBox(
-                        constraints: BoxConstraints(maxHeight: titleMaxHeight),
-                        child: ScrollConfiguration(
-                          behavior: const _CourseCardScrollBehavior(),
-                          child: SingleChildScrollView(
-                            primary: false,
-                            physics: const ClampingScrollPhysics(),
-                            child: Text(
-                              course.name,
-                              style: titleStyle,
-                              softWrap: true,
-                              overflow: TextOverflow.visible,
-                            ),
+                  return ClipRect(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxHeight: titleMaxHeight,
                           ),
-                        ),
-                      ),
-                      if (details.isNotEmpty) ...[
-                        const SizedBox(height: 2),
-                        Expanded(
                           child: ScrollConfiguration(
                             behavior: const _CourseCardScrollBehavior(),
                             child: SingleChildScrollView(
                               primary: false,
                               physics: const ClampingScrollPhysics(),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  for (final detail in details)
-                                    Padding(
-                                      padding: const EdgeInsets.only(bottom: 2),
-                                      child: Text(
-                                        detail,
-                                        style: detailStyle,
-                                        softWrap: true,
-                                        overflow: TextOverflow.visible,
-                                      ),
-                                    ),
-                                ],
+                              child: Text(
+                                course.name,
+                                style: titleStyle,
+                                softWrap: true,
+                                overflow: TextOverflow.visible,
                               ),
                             ),
                           ),
                         ),
+                        if (details.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Expanded(
+                            child: ScrollConfiguration(
+                              behavior: const _CourseCardScrollBehavior(),
+                              child: SingleChildScrollView(
+                                primary: false,
+                                physics: const ClampingScrollPhysics(),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    for (final detail in details)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 2,
+                                        ),
+                                        child: Text(
+                                          detail,
+                                          style: detailStyle,
+                                          softWrap: true,
+                                          overflow: TextOverflow.visible,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
-                );
-              },
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         ),
       ),
     );
   }
+}
+
+Color _holidayMutedCourseColor(ColorScheme colorScheme) {
+  return Color.alphaBlend(
+    colorScheme.onSurfaceVariant.withValues(
+      alpha: colorScheme.brightness == Brightness.light ? 0.12 : 0.18,
+    ),
+    colorScheme.surfaceContainerHighest,
+  );
 }
 
 class _CourseCardScrollBehavior extends ScrollBehavior {
@@ -978,10 +1551,140 @@ class _CourseCardScrollBehavior extends ScrollBehavior {
   }
 }
 
+class _TimetableBodyScrollBehavior extends ScrollBehavior {
+  const _TimetableBodyScrollBehavior();
+
+  @override
+  Widget buildScrollbar(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    return child;
+  }
+}
+
 List<String> _compactDayLabels(BuildContext context) {
   return _dayLabels(
     context,
   ).map((label) => label.replaceFirst(RegExp(r'^(周|週|星期)'), '')).toList();
+}
+
+class _TimeColumnSegment {
+  const _TimeColumnSegment({
+    required this.key,
+    required this.startMinute,
+    required this.endMinute,
+    required this.label,
+  });
+
+  final String key;
+  final int startMinute;
+  final int endMinute;
+  final String label;
+}
+
+List<_TimeColumnSegment> _timeColumnSegments({required bool compact}) {
+  final segments = <_TimeColumnSegment>[];
+  _addWholeHourSegments(
+    segments,
+    startMinute: _timelineStartMinute,
+    endMinute: defaultLessonTimeSlots.first.startMinuteOfDay,
+  );
+
+  for (var index = 0; index < defaultLessonTimeSlots.length; index++) {
+    final slot = defaultLessonTimeSlots[index];
+    segments.add(
+      _TimeColumnSegment(
+        key: 'lesson-row-${slot.section}',
+        startMinute: slot.startMinuteOfDay,
+        endMinute: slot.endMinuteOfDay,
+        label: _lessonSlotLabel(slot, compact: compact),
+      ),
+    );
+    final nextIndex = index + 1;
+    if (nextIndex < defaultLessonTimeSlots.length) {
+      _addWholeHourSegments(
+        segments,
+        startMinute: slot.endMinuteOfDay,
+        endMinute: defaultLessonTimeSlots[nextIndex].startMinuteOfDay,
+      );
+    }
+  }
+
+  _addWholeHourSegments(
+    segments,
+    startMinute: defaultLessonTimeSlots.last.endMinuteOfDay,
+    endMinute: _timelineEndMinute,
+  );
+  return segments..sort((a, b) => a.startMinute.compareTo(b.startMinute));
+}
+
+void _addWholeHourSegments(
+  List<_TimeColumnSegment> segments, {
+  required int startMinute,
+  required int endMinute,
+}) {
+  final firstWholeHour = ((startMinute + 59) ~/ 60) * 60;
+  for (var minute = firstWholeHour; minute < endMinute; minute += 60) {
+    segments.add(
+      _TimeColumnSegment(
+        key: 'hour-row-$minute',
+        startMinute: minute,
+        endMinute: math.min(minute + 60, endMinute),
+        label: _minuteLabel(minute),
+      ),
+    );
+  }
+}
+
+List<int> _timelineGuideMinutes() {
+  final minutes = <int>{0, minutesPerDay};
+  _addWholeHourGuideMinutes(
+    minutes,
+    startMinute: _timelineStartMinute,
+    endMinute: defaultLessonTimeSlots.first.startMinuteOfDay,
+  );
+  for (var index = 0; index < defaultLessonTimeSlots.length; index++) {
+    final slot = defaultLessonTimeSlots[index];
+    minutes
+      ..add(slot.startMinuteOfDay)
+      ..add(slot.endMinuteOfDay);
+    final nextIndex = index + 1;
+    if (nextIndex < defaultLessonTimeSlots.length) {
+      _addWholeHourGuideMinutes(
+        minutes,
+        startMinute: slot.endMinuteOfDay,
+        endMinute: defaultLessonTimeSlots[nextIndex].startMinuteOfDay,
+      );
+    }
+  }
+  _addWholeHourGuideMinutes(
+    minutes,
+    startMinute: defaultLessonTimeSlots.last.endMinuteOfDay,
+    endMinute: _timelineEndMinute,
+  );
+  return minutes.toList()..sort();
+}
+
+void _addWholeHourGuideMinutes(
+  Set<int> minutes, {
+  required int startMinute,
+  required int endMinute,
+}) {
+  final firstWholeHour = ((startMinute + 59) ~/ 60) * 60;
+  for (var minute = firstWholeHour; minute <= endMinute; minute += 60) {
+    minutes.add(minute);
+  }
+}
+
+String _lessonSlotLabel(LessonTimeSlot slot, {required bool compact}) {
+  final start = _minuteLabel(slot.startMinuteOfDay);
+  final end = _minuteLabel(slot.endMinuteOfDay);
+  if (compact) {
+    return '${slot.section}\n$start\n$end';
+  }
+  return '${slot.section}\n$start-$end';
 }
 
 String _monthLabel(BuildContext context, List<DateTime> dates) {
@@ -1021,16 +1724,22 @@ List<DateTime> _datesForWeek({
 }
 
 class _TodayCourseList extends StatelessWidget {
-  const _TodayCourseList({required this.courses});
+  const _TodayCourseList({
+    required this.courses,
+    required this.onCourseSelected,
+  });
 
   final List<CourseSlot> courses;
+  final ValueChanged<CourseSlot> onCourseSelected;
 
   @override
   Widget build(BuildContext context) {
     final ordered = [...courses]
       ..sort((a, b) {
-        final byStart = a.startPeriod.compareTo(b.startPeriod);
-        return byStart == 0 ? a.endPeriod.compareTo(b.endPeriod) : byStart;
+        final byStart = a.startMinuteOfDay.compareTo(b.startMinuteOfDay);
+        return byStart == 0
+            ? a.endMinuteOfDay.compareTo(b.endMinuteOfDay)
+            : byStart;
       });
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -1064,16 +1773,19 @@ class _TodayCourseList extends StatelessWidget {
                   key: ValueKey(ordered.map((course) => course.id).join(',')),
                   children: [
                     for (final course in ordered)
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: CircleAvatar(backgroundColor: course.color),
-                        title: Text(course.name),
-                        subtitle: Text(
-                          '${_periodLabel(context, course)}  '
-                          '${course.location}',
+                      Material(
+                        color: Colors.transparent,
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: CircleAvatar(backgroundColor: course.color),
+                          title: Text(course.name),
+                          subtitle: Text(
+                            '${_courseTimeLabel(course)}  '
+                            '${course.location}',
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => onCourseSelected(course),
                         ),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => _showCourseDetails(context, course),
                       ),
                   ],
                 ),
@@ -1083,20 +1795,13 @@ class _TodayCourseList extends StatelessWidget {
   }
 }
 
-void _showCourseDetails(BuildContext context, CourseSlot course) {
+void _showCourseDetailsDialog(BuildContext context, CourseSlot course) {
   final returnPath = GoRouterState.of(context).uri.toString();
   final details = _CourseDetails(course: course, returnPath: returnPath);
-  if (MediaQuery.sizeOf(context).width < 700) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => details,
-    );
-    return;
-  }
-
+  final colorScheme = Theme.of(context).colorScheme;
   showDialog<void>(
     context: context,
+    barrierColor: appModalScrimColor(colorScheme),
     builder: (context) => Dialog(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520),
@@ -1106,16 +1811,172 @@ void _showCourseDetails(BuildContext context, CourseSlot course) {
   );
 }
 
-class _CourseDetails extends StatelessWidget {
-  const _CourseDetails({required this.course, required this.returnPath});
+void _showCourseDetailsSheet(BuildContext context, CourseSlot course) {
+  final returnPath = GoRouterState.of(context).uri.toString();
+  Navigator.of(
+    context,
+  ).push(_CourseDetailsSheetRoute(course: course, returnPath: returnPath));
+}
+
+class _CourseDetailsSheetRoute extends PopupRoute<void> {
+  _CourseDetailsSheetRoute({required this.course, required this.returnPath});
 
   final CourseSlot course;
   final String returnPath;
 
   @override
+  Color? get barrierColor => null;
+
+  @override
+  bool get barrierDismissible => false;
+
+  @override
+  String? get barrierLabel => null;
+
+  @override
+  Duration get transitionDuration => _courseSheetTransitionDuration;
+
+  @override
+  Duration get reverseTransitionDuration =>
+      _courseSheetReverseTransitionDuration;
+
+  @override
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) {
+    return _CourseDetailsSheetOverlay(
+      animation: animation,
+      course: course,
+      returnPath: returnPath,
+    );
+  }
+}
+
+class _CourseDetailsSheetOverlay extends StatelessWidget {
+  const _CourseDetailsSheetOverlay({
+    required this.animation,
+    required this.course,
+    required this.returnPath,
+  });
+
+  final Animation<double> animation;
+  final CourseSlot course;
+  final String returnPath;
+
+  @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final curvedAnimation = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+    final slideAnimation = curvedAnimation.drive(
+      Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero),
+    );
+
+    return Stack(
+      children: [
+        Positioned(
+          left: 0,
+          top: 0,
+          right: 0,
+          bottom: 0,
+          child: FadeTransition(
+            opacity: curvedAnimation,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => Navigator.of(context).maybePop(),
+              child: ColoredBox(color: appModalScrimColor(colorScheme)),
+            ),
+          ),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: SlideTransition(
+            position: slideAnimation,
+            child: _CourseDetailsSheet(
+              key: const ValueKey<String>('course-details-sheet'),
+              child: _CourseDetails(
+                course: course,
+                returnPath: returnPath,
+                onClose: () => Navigator.of(context).maybePop(),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CourseDetailsSheet extends StatelessWidget {
+  const _CourseDetailsSheet({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final navigationBarBackground =
+        Theme.of(context).navigationBarTheme.backgroundColor ??
+        colorScheme.surfaceContainerLow;
+    return SafeArea(
+      top: false,
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 16),
+        child: Material(
+          color: navigationBarBackground,
+          surfaceTintColor: Colors.transparent,
+          elevation: 6,
+          shadowColor: colorScheme.shadow.withValues(alpha: 0.24),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 10),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const SizedBox(width: 32, height: 4),
+              ),
+              child,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CourseDetails extends StatelessWidget {
+  const _CourseDetails({
+    required this.course,
+    required this.returnPath,
+    this.onClose,
+  });
+
+  final CourseSlot course;
+  final String returnPath;
+  final VoidCallback? onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final canEdit =
+        (course.courseId != null && course.sessionId != null) ||
+        course.examId != null;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+      padding: const EdgeInsetsDirectional.fromSTEB(24, 8, 12, 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1128,20 +1989,44 @@ class _CourseDetails extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
-              IconButton(
-                tooltip: context.l10n.edit,
-                onPressed: () {
-                  final router = GoRouter.of(context);
-                  Navigator.of(context).pop();
-                  router.push(
-                    Uri(
-                      path: '/editor',
-                      queryParameters: {'slot': course.id, 'from': returnPath},
-                    ).toString(),
-                  );
-                },
-                icon: const Icon(Icons.edit_outlined),
-              ),
+              if (canEdit)
+                IconButton(
+                  tooltip: context.l10n.edit,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 48,
+                    height: 48,
+                  ),
+                  onPressed: () {
+                    final router = GoRouter.of(context);
+                    if (onClose == null) {
+                      Navigator.of(context).pop();
+                    } else {
+                      onClose!();
+                    }
+                    router.push(
+                      Uri(
+                        path: '/editor',
+                        queryParameters: {
+                          'slot': course.id,
+                          'from': returnPath,
+                        },
+                      ).toString(),
+                    );
+                  },
+                  icon: const Icon(Icons.edit_outlined),
+                ),
+              if (onClose != null)
+                IconButton(
+                  tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 48,
+                    height: 48,
+                  ),
+                  onPressed: onClose,
+                  icon: const Icon(Icons.close),
+                ),
             ],
           ),
           const SizedBox(height: 12),
@@ -1151,7 +2036,7 @@ class _CourseDetails extends StatelessWidget {
             icon: Icons.schedule_outlined,
             text:
                 '${_dayLabels(context)[course.weekday - 1]}, '
-                '${_periodLabel(context, course)}, '
+                '${_courseTimeLabel(course)}, '
                 '${_weekLabel(context, course)}',
           ),
           if (course.notes.isNotEmpty)
@@ -1175,8 +2060,16 @@ List<String> _dayLabels(BuildContext context) {
   ];
 }
 
-String _periodLabel(BuildContext context, CourseSlot course) {
-  return context.l10n.periodsValue(course.startPeriod, course.endPeriod);
+String _courseTimeLabel(CourseSlot course) {
+  return '${_minuteLabel(course.startMinuteOfDay)}-'
+      '${_minuteLabel(course.endMinuteOfDay)}';
+}
+
+String _minuteLabel(int minuteOfDay) {
+  final hour = minuteOfDay ~/ 60;
+  final minute = minuteOfDay % 60;
+  return '${hour.toString().padLeft(2, '0')}:'
+      '${minute.toString().padLeft(2, '0')}';
 }
 
 String _weekLabel(BuildContext context, CourseSlot course) {

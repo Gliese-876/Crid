@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'locale_controller.dart';
 import '../data/database/app_database.dart';
+import '../features/import/domain/parsed_exam_schedule.dart';
 import '../features/import/domain/parsed_timetable.dart';
 import '../features/reminder/data/local_notification_reminder_scheduler.dart';
 import '../features/timetable/data/timetable_repository.dart';
@@ -25,6 +26,20 @@ class SelectedWeekNotifier extends Notifier<int> {
 final selectedWeekProvider = NotifierProvider<SelectedWeekNotifier, int>(
   SelectedWeekNotifier.new,
 );
+
+class TimetableAutoScrollRequestNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void request() {
+    state += 1;
+  }
+}
+
+final timetableAutoScrollRequestProvider =
+    NotifierProvider<TimetableAutoScrollRequestNotifier, int>(
+      TimetableAutoScrollRequestNotifier.new,
+    );
 
 int weekNumberForDate({
   required DateTime firstWeekMonday,
@@ -73,6 +88,12 @@ class TimetableController extends AsyncNotifier<TimetableSnapshot> {
     ref.invalidateSelf();
   }
 
+  Future<void> saveExam(ExamSlotDraft draft) async {
+    await _repository.saveExam(draft);
+    ref.invalidate(examSchedulesProvider);
+    ref.invalidateSelf();
+  }
+
   Future<void> deleteSession({
     required int courseId,
     required int sessionId,
@@ -82,11 +103,27 @@ class TimetableController extends AsyncNotifier<TimetableSnapshot> {
     ref.invalidateSelf();
   }
 
+  Future<void> deleteExam(int examId) async {
+    await _repository.deleteExam(examId);
+    ref.invalidate(examSchedulesProvider);
+    ref.invalidateSelf();
+  }
+
   Future<ImportCommitSummary> commitImport(ParsedTimetable parsed) async {
     final summary = await _repository.commitImport(parsed);
     await _rebuildReminders();
     ref.invalidate(pendingConflictsProvider);
     ref.invalidate(importHistoryProvider);
+    ref.invalidateSelf();
+    return summary;
+  }
+
+  Future<ExamImportCommitSummary> commitExamImport(
+    ParsedExamSchedule parsed,
+  ) async {
+    final summary = await _repository.commitExamImport(parsed);
+    ref.invalidate(importHistoryProvider);
+    ref.invalidate(examSchedulesProvider);
     ref.invalidateSelf();
     return summary;
   }
@@ -232,6 +269,12 @@ class TimetableController extends AsyncNotifier<TimetableSnapshot> {
     ref.invalidateSelf();
   }
 
+  Future<void> restoreHiddenExam(int examId) async {
+    await _repository.restoreHiddenExam(examId);
+    ref.invalidate(examSchedulesProvider);
+    ref.invalidateSelf();
+  }
+
   Future<void> updateReminderSettings(ReminderSettings settings) async {
     var nextSettings = settings;
     if (settings.enabled) {
@@ -239,6 +282,13 @@ class TimetableController extends AsyncNotifier<TimetableSnapshot> {
           .requestPermissionsForScheduling();
       if (!permissions.notificationsAllowed) {
         nextSettings = settings.copyWith(enabled: false);
+      }
+    }
+    if (nextSettings.enabled && nextSettings.ignoreDoNotDisturb) {
+      final dndAllowed = await _reminderScheduler
+          .requestDoNotDisturbBypassIfSupported();
+      if (!dndAllowed) {
+        nextSettings = nextSettings.copyWith(ignoreDoNotDisturb: false);
       }
     }
     await _repository.updateReminderSettings(nextSettings);
@@ -267,7 +317,9 @@ class TimetableController extends AsyncNotifier<TimetableSnapshot> {
       sessions: settings.enabled ? reminderData.sessions : const [],
       firstWeekMonday: reminderData.firstWeekMonday,
       now: DateTime.now(),
-      minutesBefore: settings.minutesBefore,
+      reminderOffsets: settings.reminderOffsets,
+      ignoreDoNotDisturb: settings.ignoreDoNotDisturb,
+      vibrateOnly: settings.vibrateOnly,
       windowDays: defaultReminderScheduleWindowDays,
       titleForMinutes: ref.read(reminderNotificationTitleProvider),
     );
@@ -296,11 +348,6 @@ final importHistoryProvider = FutureProvider<List<ImportBatchSummary>>((ref) {
   return ref.watch(timetableRepositoryProvider).loadRecentImportBatches();
 });
 
-extension on ReminderSettings {
-  ReminderSettings copyWith({bool? enabled, int? minutesBefore}) {
-    return ReminderSettings(
-      enabled: enabled ?? this.enabled,
-      minutesBefore: minutesBefore ?? this.minutesBefore,
-    );
-  }
-}
+final examSchedulesProvider = FutureProvider<List<ExamSchedule>>((ref) {
+  return ref.watch(timetableRepositoryProvider).loadExamSchedules();
+});

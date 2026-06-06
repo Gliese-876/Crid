@@ -75,6 +75,8 @@ class ClassSessions extends Table {
   IntColumn get weekday => integer()();
   IntColumn get startSection => integer()();
   IntColumn get endSection => integer()();
+  IntColumn get startMinuteOfDay => integer().nullable()();
+  IntColumn get endMinuteOfDay => integer().nullable()();
   IntColumn get weekStart => integer()();
   IntColumn get weekEnd => integer()();
   TextColumn get weekParity => text().nullable()();
@@ -110,9 +112,35 @@ class ReminderRules extends Table {
       integer().nullable().references(TimetablePlans, #id)();
   IntColumn get courseId => integer().nullable().references(Courses, #id)();
   IntColumn get minutesBefore => integer().withDefault(const Constant(20))();
+  TextColumn get reminderOffsetsJson => text().nullable()();
+  BoolColumn get ignoreDnd => boolean().withDefault(const Constant(false))();
+  BoolColumn get vibrateOnly => boolean().withDefault(const Constant(false))();
   BoolColumn get enabled => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+class ExamSchedules extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get importBatchId =>
+      integer().nullable().references(ImportBatches, #id)();
+  IntColumn get sourceRecordId =>
+      integer().nullable().references(SourceRecords, #id)();
+  TextColumn get examRound => text().withLength(min: 1, max: 160)();
+  TextColumn get courseCode => text().nullable().withLength(max: 64)();
+  TextColumn get courseName => text().withLength(min: 1, max: 180)();
+  RealColumn get credits => real().nullable()();
+  TextColumn get category => text().nullable().withLength(max: 160)();
+  TextColumn get assessmentMethod => text().nullable().withLength(max: 64)();
+  DateTimeColumn get startAt => dateTime()();
+  DateTimeColumn get endAt => dateTime()();
+  IntColumn get semesterWeek => integer()();
+  IntColumn get weekday => integer()();
+  TextColumn get location => text().nullable().withLength(max: 220)();
+  TextColumn get seatNumber => text().nullable().withLength(max: 32)();
+  TextColumn get rawText => text().nullable()();
+  BoolColumn get isHidden => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
 @DriftDatabase(
@@ -125,13 +153,14 @@ class ReminderRules extends Table {
     SourceRecords,
     MergeConflicts,
     ReminderRules,
+    ExamSchedules,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -141,6 +170,22 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 3) {
         await migrator.addColumn(semesters, semesters.nameManuallyEdited);
+      }
+      if (from < 4) {
+        await migrator.addColumn(
+          reminderRules,
+          reminderRules.reminderOffsetsJson,
+        );
+        await migrator.addColumn(reminderRules, reminderRules.ignoreDnd);
+        await migrator.addColumn(reminderRules, reminderRules.vibrateOnly);
+        await migrator.createTable(examSchedules);
+      }
+      if (from < 5) {
+        await migrator.addColumn(classSessions, classSessions.startMinuteOfDay);
+        await migrator.addColumn(classSessions, classSessions.endMinuteOfDay);
+      }
+      if (from < 6) {
+        await migrator.addColumn(examSchedules, examSchedules.isHidden);
       }
     },
   );
@@ -171,6 +216,8 @@ class AppDatabase extends _$AppDatabase {
         weekday: session.weekday,
         startSection: session.startSection,
         endSection: session.endSection,
+        startMinuteOfDay: session.startMinuteOfDay,
+        endMinuteOfDay: session.endMinuteOfDay,
         weekStart: session.weekStart,
         weekEnd: session.weekEnd,
         weekParity: WeekParity.fromDatabase(session.weekParity),

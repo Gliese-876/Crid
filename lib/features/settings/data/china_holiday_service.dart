@@ -8,27 +8,39 @@ typedef HolidayJsonFetcher = Future<String> Function(Uri uri);
 
 enum HolidayAdjustmentMode { noAdjustment, makeUpWorkdays, noMakeUpWorkdays }
 
+enum HolidayCourseDisplayMode { normal, muted, hidden }
+
 class HolidaySettings {
   const HolidaySettings({
     required this.hideLegalHolidays,
     required this.adjustmentMode,
+    this.courseDisplayMode = HolidayCourseDisplayMode.muted,
+    this.examDisplayMode = HolidayCourseDisplayMode.normal,
   });
 
   static const defaults = HolidaySettings(
-    hideLegalHolidays: false,
+    hideLegalHolidays: true,
     adjustmentMode: HolidayAdjustmentMode.noAdjustment,
+    courseDisplayMode: HolidayCourseDisplayMode.muted,
+    examDisplayMode: HolidayCourseDisplayMode.normal,
   );
 
   final bool hideLegalHolidays;
   final HolidayAdjustmentMode adjustmentMode;
+  final HolidayCourseDisplayMode courseDisplayMode;
+  final HolidayCourseDisplayMode examDisplayMode;
 
   HolidaySettings copyWith({
     bool? hideLegalHolidays,
     HolidayAdjustmentMode? adjustmentMode,
+    HolidayCourseDisplayMode? courseDisplayMode,
+    HolidayCourseDisplayMode? examDisplayMode,
   }) {
     return HolidaySettings(
       hideLegalHolidays: hideLegalHolidays ?? this.hideLegalHolidays,
       adjustmentMode: adjustmentMode ?? this.adjustmentMode,
+      courseDisplayMode: courseDisplayMode ?? this.courseDisplayMode,
+      examDisplayMode: examDisplayMode ?? this.examDisplayMode,
     );
   }
 }
@@ -182,6 +194,22 @@ List<bool> holidayRestDayFlags({
   required ChinaHolidaySchedule schedule,
 }) {
   return [for (final date in dates) schedule.shouldHide(date, settings)];
+}
+
+HolidayCourseDisplayMode holidayCourseDisplayModeForWeekday({
+  required int weekday,
+  required bool isExam,
+  required List<DateTime> dates,
+  required HolidaySettings settings,
+  required ChinaHolidaySchedule schedule,
+}) {
+  if (weekday < 1 || weekday > dates.length) {
+    return HolidayCourseDisplayMode.normal;
+  }
+  if (!schedule.shouldHide(dates[weekday - 1], settings)) {
+    return HolidayCourseDisplayMode.normal;
+  }
+  return isExam ? settings.examDisplayMode : settings.courseDisplayMode;
 }
 
 class ChinaHolidayService {

@@ -11,6 +11,7 @@ import '../../../data/database/app_database.dart' hide MergeConflict;
 import '../../../data/database/timetable_time.dart' as db_time;
 import '../../export/data/ics_export_service.dart';
 import '../../import/domain/merge_engine.dart';
+import '../../import/domain/parsed_exam_schedule.dart';
 import '../../import/domain/parsed_timetable.dart';
 import '../presentation/course_slot_model.dart';
 
@@ -68,12 +69,14 @@ class HiddenCourseSummary {
     required this.name,
     required this.teacher,
     required this.sessionCount,
+    this.isExam = false,
   });
 
   final int id;
   final String name;
   final String teacher;
   final int sessionCount;
+  final bool isExam;
 }
 
 class DeletedPlanSnapshot {
@@ -96,10 +99,49 @@ class DeletedSemesterSnapshot {
 }
 
 class ReminderSettings {
-  const ReminderSettings({required this.enabled, required this.minutesBefore});
+  const ReminderSettings({
+    required this.enabled,
+    required this.reminderOffsets,
+    this.ignoreDoNotDisturb = false,
+    this.vibrateOnly = false,
+  });
+
+  factory ReminderSettings.legacy({
+    required bool enabled,
+    required int minutesBefore,
+  }) {
+    return ReminderSettings(enabled: enabled, reminderOffsets: [minutesBefore]);
+  }
+
+  static const defaults = ReminderSettings(
+    enabled: false,
+    reminderOffsets: [20],
+  );
 
   final bool enabled;
-  final int minutesBefore;
+  final List<int> reminderOffsets;
+  final bool ignoreDoNotDisturb;
+  final bool vibrateOnly;
+
+  int get minutesBefore => reminderOffsets.isEmpty
+      ? 20
+      : reminderOffsets.reduce((a, b) => a < b ? a : b);
+
+  ReminderSettings copyWith({
+    bool? enabled,
+    Iterable<int>? reminderOffsets,
+    bool? ignoreDoNotDisturb,
+    bool? vibrateOnly,
+  }) {
+    return ReminderSettings(
+      enabled: enabled ?? this.enabled,
+      reminderOffsets: _normalizedReminderOffsets(
+        reminderOffsets ?? this.reminderOffsets,
+      ),
+      ignoreDoNotDisturb: ignoreDoNotDisturb ?? this.ignoreDoNotDisturb,
+      vibrateOnly: vibrateOnly ?? this.vibrateOnly,
+    );
+  }
 }
 
 class CourseSlotDraft {
@@ -110,8 +152,7 @@ class CourseSlotDraft {
     required this.teacher,
     required this.location,
     required this.weekday,
-    required this.startPeriod,
-    required this.endPeriod,
+    required this.timeRange,
     required this.startWeek,
     required this.endWeek,
     required this.parity,
@@ -126,12 +167,39 @@ class CourseSlotDraft {
   final String teacher;
   final String location;
   final int weekday;
-  final int startPeriod;
-  final int endPeriod;
+  final CourseTimeRange timeRange;
   final int startWeek;
   final int endWeek;
   final WeekParity parity;
   final Color color;
+  final String notes;
+  final bool hidden;
+
+  int get startPeriod => timeRange.period.start;
+
+  int get endPeriod => timeRange.period.end;
+}
+
+class ExamSlotDraft {
+  const ExamSlotDraft({
+    this.examId,
+    required this.name,
+    required this.examRound,
+    required this.location,
+    required this.weekday,
+    required this.timeRange,
+    required this.semesterWeek,
+    this.notes = '',
+    this.hidden = false,
+  });
+
+  final int? examId;
+  final String name;
+  final String examRound;
+  final String location;
+  final int weekday;
+  final CourseTimeRange timeRange;
+  final int semesterWeek;
   final String notes;
   final bool hidden;
 }
@@ -148,6 +216,13 @@ class ImportCommitSummary {
   final int skipped;
   final int diffs;
   final int conflicts;
+}
+
+class ExamImportCommitSummary {
+  const ExamImportCommitSummary({required this.added, required this.skipped});
+
+  final int added;
+  final int skipped;
 }
 
 class ImportBatchSummary {
@@ -214,7 +289,9 @@ class TimetableRepository {
       (semester) => semester.id == activePlanRow.semesterId,
     );
     final sessions = await _db.sessionsForPlan(activePlanRow.id);
+    final exams = await loadExamSchedules(limit: null);
     final hiddenCourses = await _hiddenCoursesForPlan(activePlanRow.id);
+    final colorByIdentity = _courseColorsForSessions(sessions);
 
     return TimetableSnapshot(
       semesters: [
@@ -249,7 +326,12 @@ class TimetableRepository {
         firstWeekMonday: activeSemesterRow.firstWeekMonday,
         endDate: activeSemesterRow.endDate,
       ),
-      courses: _slotsFromSessions(sessions),
+      courses: [
+        for (final session in sessions)
+          _slotFromSession(session, colorByIdentity: colorByIdentity),
+        for (final exam in exams)
+          _slotFromExamSchedule(exam, courseColorByIdentity: colorByIdentity),
+      ],
       hiddenCourses: hiddenCourses,
     );
   }
@@ -310,6 +392,11 @@ class TimetableRepository {
     await _db.transaction(() => _writeCourse(draft, planId: targetPlanId));
   }
 
+  Future<void> saveExam(ExamSlotDraft draft) async {
+    await ensureSeedData();
+    await _db.transaction(() => _writeExam(draft));
+  }
+
   Future<void> deleteSession({
     required int courseId,
     required int sessionId,
@@ -327,6 +414,12 @@ class TimetableRepository {
         )..where((row) => row.id.equals(courseId))).go();
       }
     });
+  }
+
+  Future<void> deleteExam(int examId) async {
+    await (_db.delete(
+      _db.examSchedules,
+    )..where((row) => row.id.equals(examId))).go();
   }
 
   Future<void> _writeCourse(
@@ -366,11 +459,14 @@ class TimetableRepository {
       );
     }
 
+    final timeRange = draft.timeRange;
     final sessionCompanion = ClassSessionsCompanion(
       courseId: Value(courseId),
       weekday: Value(draft.weekday),
-      startSection: Value(draft.startPeriod),
-      endSection: Value(draft.endPeriod),
+      startSection: Value(timeRange.period.start),
+      endSection: Value(timeRange.period.end),
+      startMinuteOfDay: Value(timeRange.startMinuteOfDay),
+      endMinuteOfDay: Value(timeRange.endMinuteOfDay),
       weekStart: Value(draft.startWeek),
       weekEnd: Value(draft.endWeek),
       weekParity: Value(_parityToDatabase(draft.parity)),
@@ -385,6 +481,40 @@ class TimetableRepository {
             ..where((row) => row.id.equals(draft.sessionId!)))
           .write(sessionCompanion);
     }
+  }
+
+  Future<void> _writeExam(ExamSlotDraft draft) async {
+    final activePlanId = await _activePlanId();
+    final activePlan = await (_db.select(
+      _db.timetablePlans,
+    )..where((row) => row.id.equals(activePlanId))).getSingle();
+    final activeSemester = await (_db.select(
+      _db.semesters,
+    )..where((row) => row.id.equals(activePlan.semesterId))).getSingle();
+    final date = activeSemester.firstWeekMonday.add(
+      Duration(days: (draft.semesterWeek - 1) * 7 + draft.weekday - 1),
+    );
+    final startAt = _dateTimeAtMinute(date, draft.timeRange.startMinuteOfDay);
+    final endAt = _dateTimeAtMinute(date, draft.timeRange.endMinuteOfDay);
+    final companion = ExamSchedulesCompanion(
+      examRound: Value(draft.examRound),
+      courseName: Value(draft.name),
+      startAt: Value(startAt),
+      endAt: Value(endAt),
+      semesterWeek: Value(draft.semesterWeek),
+      weekday: Value(draft.weekday),
+      location: Value(_nullable(draft.location)),
+      seatNumber: const Value(null),
+      rawText: Value(_nullable(draft.notes)),
+      isHidden: Value(draft.hidden),
+    );
+    if (draft.examId == null) {
+      await _db.into(_db.examSchedules).insert(companion);
+      return;
+    }
+    await (_db.update(
+      _db.examSchedules,
+    )..where((row) => row.id.equals(draft.examId!))).write(companion);
   }
 
   Future<void> createPlan({
@@ -546,6 +676,11 @@ class TimetableRepository {
         updatedAt: Value(DateTime.now()),
       ),
     );
+  }
+
+  Future<void> restoreHiddenExam(int examId) async {
+    await (_db.update(_db.examSchedules)..where((row) => row.id.equals(examId)))
+        .write(const ExamSchedulesCompanion(isHidden: Value(false)));
   }
 
   Future<void> deleteSemester(int semesterId) async {
@@ -772,6 +907,8 @@ class TimetableRepository {
               weekday: session.weekday,
               startSection: session.startSection,
               endSection: session.endSection,
+              startMinuteOfDay: Value(session.startMinuteOfDay),
+              endMinuteOfDay: Value(session.endMinuteOfDay),
               weekStart: session.weekStart,
               weekEnd: session.weekEnd,
               weekParity: Value(session.weekParity),
@@ -845,6 +982,69 @@ class TimetableRepository {
     );
   }
 
+  Future<ExamImportCommitSummary> commitExamImport(
+    ParsedExamSchedule parsed,
+  ) async {
+    var added = 0;
+    var skipped = 0;
+    await _db.transaction(() async {
+      final batchId = await _db
+          .into(_db.importBatches)
+          .insert(
+            ImportBatchesCompanion.insert(
+              sourceName: parsed.sourceName,
+              fileType: parsed.fileType.name,
+              summaryJson: Value(
+                jsonEncode({
+                  'exams': parsed.exams.length,
+                  'warnings': parsed.warnings.length,
+                }),
+              ),
+            ),
+          );
+
+      for (final exam in parsed.exams) {
+        final inserted = await _insertParsedExam(exam, batchId: batchId);
+        if (inserted) {
+          added += 1;
+        } else {
+          skipped += 1;
+        }
+      }
+
+      await (_db.update(
+        _db.importBatches,
+      )..where((row) => row.id.equals(batchId))).write(
+        ImportBatchesCompanion(
+          summaryJson: Value(
+            jsonEncode({
+              'exams': parsed.exams.length,
+              'warnings': parsed.warnings.length,
+              'added': added,
+              'skipped': skipped,
+            }),
+          ),
+        ),
+      );
+    });
+    return ExamImportCommitSummary(added: added, skipped: skipped);
+  }
+
+  Future<List<ExamSchedule>> loadExamSchedules({
+    int? limit = 80,
+    bool includeHidden = false,
+  }) {
+    final query = _db.select(_db.examSchedules)
+      ..orderBy([(row) => OrderingTerm.asc(row.startAt)]);
+    if (!includeHidden) {
+      query.where((row) => row.isHidden.equals(false));
+    }
+    if (limit != null) {
+      query.limit(limit);
+    }
+    return query.get();
+  }
+
   Future<MergeResult> previewImport(
     ParsedTimetable parsed, {
     int? planId,
@@ -904,11 +1104,17 @@ class TimetableRepository {
             ))
             .getSingleOrNull();
     if (rule == null) {
-      return const ReminderSettings(enabled: false, minutesBefore: 20);
+      return ReminderSettings.defaults;
     }
+    final offsets = _decodeReminderOffsetsJson(
+      rule.reminderOffsetsJson,
+      fallback: rule.minutesBefore,
+    );
     return ReminderSettings(
       enabled: rule.enabled,
-      minutesBefore: rule.minutesBefore,
+      reminderOffsets: offsets,
+      ignoreDoNotDisturb: rule.ignoreDnd,
+      vibrateOnly: rule.vibrateOnly,
     );
   }
 
@@ -923,7 +1129,10 @@ class TimetableRepository {
       planId: Value(planId),
       courseId: const Value(null),
       enabled: Value(settings.enabled),
-      minutesBefore: Value(settings.minutesBefore.clamp(5, 120)),
+      minutesBefore: Value(settings.minutesBefore.clamp(0, 1440)),
+      reminderOffsetsJson: Value(jsonEncode(settings.reminderOffsets)),
+      ignoreDnd: Value(settings.ignoreDoNotDisturb),
+      vibrateOnly: Value(settings.vibrateOnly),
       updatedAt: Value(DateTime.now()),
     );
     if (existing == null) {
@@ -1047,6 +1256,23 @@ class TimetableRepository {
         ),
       );
     }
+    final exams =
+        await (_db.select(_db.examSchedules)
+              ..where((row) => row.isHidden.equals(true))
+              ..orderBy([(row) => OrderingTerm.asc(row.courseName)]))
+            .get();
+    for (final exam in exams) {
+      summaries.add(
+        HiddenCourseSummary(
+          id: exam.id,
+          name: exam.courseName,
+          teacher: exam.examRound,
+          sessionCount: 1,
+          isExam: true,
+        ),
+      );
+    }
+    summaries.sort((a, b) => a.name.compareTo(b.name));
     return summaries;
   }
 
@@ -1098,6 +1324,7 @@ class TimetableRepository {
         location: session.location ?? '',
         weekday: session.weekday,
         period: PeriodRange(session.startSection, session.endSection),
+        timeRange: _timeRangeFromSession(session),
         weeks: import_time.WeekPattern.range(
           session.weekStart,
           session.weekEnd,
@@ -1123,6 +1350,7 @@ class TimetableRepository {
         location: session.location ?? '',
         weekday: session.weekday,
         period: PeriodRange(session.startSection, session.endSection),
+        timeRange: _timeRangeFromSession(session),
         weeks: import_time.WeekPattern.range(
           session.weekStart,
           session.weekEnd,
@@ -1130,6 +1358,42 @@ class TimetableRepository {
         ),
       );
     }).toList();
+  }
+
+  Future<bool> _insertParsedExam(
+    ParsedExam exam, {
+    required int batchId,
+  }) async {
+    final existing =
+        await (_db.select(_db.sourceRecords)
+              ..where((row) => row.fingerprint.equals(exam.sourceFingerprint)))
+            .getSingleOrNull();
+    if (existing != null) {
+      return false;
+    }
+    final sourceRecordId = await _sourceRecordIdForExam(exam, batchId);
+    await _db
+        .into(_db.examSchedules)
+        .insert(
+          ExamSchedulesCompanion.insert(
+            importBatchId: Value(batchId),
+            sourceRecordId: Value(sourceRecordId),
+            examRound: exam.examRound,
+            courseCode: Value(_nullable(exam.courseCode)),
+            courseName: exam.courseName,
+            credits: Value(exam.credits),
+            category: Value(_nullable(exam.category)),
+            assessmentMethod: Value(_nullable(exam.assessmentMethod)),
+            startAt: exam.startAt,
+            endAt: exam.endAt,
+            semesterWeek: exam.semesterWeek,
+            weekday: exam.weekday,
+            location: Value(_nullable(exam.location)),
+            seatNumber: Value(_nullable(exam.seatNumber)),
+            rawText: Value(exam.rawText),
+          ),
+        );
+    return true;
   }
 
   Future<void> _insertParsedCourse(
@@ -1156,14 +1420,29 @@ class TimetableRepository {
           ClassSessionsCompanion.insert(
             courseId: courseId,
             weekday: parsed.weekday,
-            startSection: parsed.period.start,
-            endSection: parsed.period.end,
+            startSection: parsed.timeRange.period.start,
+            endSection: parsed.timeRange.period.end,
+            startMinuteOfDay: Value(parsed.timeRange.startMinuteOfDay),
+            endMinuteOfDay: Value(parsed.timeRange.endMinuteOfDay),
             weekStart: parsed.weeks.weeks.isEmpty
                 ? 1
                 : parsed.weeks.weeks.first,
             weekEnd: parsed.weeks.weeks.isEmpty ? 1 : parsed.weeks.weeks.last,
             weekParity: Value(_importParityToDatabase(parsed.weeks.parity)),
             location: Value(_nullable(parsed.location)),
+          ),
+        );
+  }
+
+  Future<int> _sourceRecordIdForExam(ParsedExam exam, int batchId) {
+    return _db
+        .into(_db.sourceRecords)
+        .insert(
+          SourceRecordsCompanion.insert(
+            importBatchId: Value(batchId),
+            fingerprint: exam.sourceFingerprint,
+            rawContent: Value(exam.rawText),
+            normalizedJson: Value(jsonEncode(exam.toNormalizedJson())),
           ),
         );
   }
@@ -1190,7 +1469,10 @@ class TimetableRepository {
                 'teacher': course.teacher,
                 'location': course.location,
                 'weekday': course.weekday,
-                'period': course.period.normalizedKey,
+                'timeRange': {
+                  'startMinuteOfDay': course.timeRange.startMinuteOfDay,
+                  'endMinuteOfDay': course.timeRange.endMinuteOfDay,
+                },
                 'weeks': course.weeks.normalizedKey,
               }),
             ),
@@ -1233,7 +1515,13 @@ class TimetableRepository {
       );
     }
 
-    final period = (normalized['period'] as String? ?? '1-2').split('-');
+    final timeRangeJson = normalized['timeRange'];
+    final startMinute = timeRangeJson is Map
+        ? timeRangeJson['startMinuteOfDay'] as int?
+        : normalized['startMinuteOfDay'] as int?;
+    final endMinute = timeRangeJson is Map
+        ? timeRangeJson['endMinuteOfDay'] as int?
+        : normalized['endMinuteOfDay'] as int?;
     final weeksText = normalized['weeks'] as String? ?? '1';
     final weeks = [
       for (final part in weeksText.split(','))
@@ -1242,15 +1530,30 @@ class TimetableRepository {
     final weekPattern = weeks.isEmpty
         ? import_time.WeekPattern.range(1, 1)
         : import_time.WeekPattern(weeks);
+    final legacyPeriod = (normalized['period'] as String? ?? '1-2').split('-');
+    final legacyPeriodRange = PeriodRange(
+      int.tryParse(legacyPeriod.first) ?? 1,
+      int.tryParse(
+            legacyPeriod.length > 1 ? legacyPeriod.last : legacyPeriod.first,
+          ) ??
+          2,
+    );
+    final timeRange = startMinute != null && endMinute != null
+        ? CourseTimeRange.fromClockTimes(
+            startMinuteOfDay: startMinute,
+            endMinuteOfDay: endMinute,
+          )
+        : CourseTimeRange.fromPeriods(
+            legacyPeriodRange.start,
+            legacyPeriodRange.end,
+          );
     return ParsedCourse(
       name: normalized['name'] as String? ?? 'Unknown course',
       teacher: normalized['teacher'] as String? ?? '',
       location: normalized['location'] as String? ?? '',
       weekday: normalized['weekday'] as int? ?? DateTime.monday,
-      period: PeriodRange(
-        int.tryParse(period.first) ?? 1,
-        int.tryParse(period.length > 1 ? period.last : period.first) ?? 2,
-      ),
+      period: timeRange.period,
+      timeRange: timeRange,
       weeks: weekPattern,
       rawText: record.rawContent,
       sourceFingerprint: record.fingerprint,
@@ -1263,6 +1566,40 @@ String? _nullable(String value) {
   return trimmed.isEmpty ? null : trimmed;
 }
 
+List<int> _normalizedReminderOffsets(Iterable<int> values) {
+  final normalized =
+      values
+          .map((value) => value.clamp(0, 1440).toInt())
+          .where((value) => value >= 0)
+          .toSet()
+          .toList()
+        ..sort();
+  if (normalized.isEmpty) {
+    return const [20];
+  }
+  return List.unmodifiable(normalized);
+}
+
+List<int> _decodeReminderOffsetsJson(
+  String? jsonValue, {
+  required int fallback,
+}) {
+  if (jsonValue == null || jsonValue.trim().isEmpty) {
+    return _normalizedReminderOffsets([fallback]);
+  }
+  try {
+    final decoded = jsonDecode(jsonValue);
+    if (decoded is List) {
+      return _normalizedReminderOffsets(
+        decoded.whereType<num>().map((value) => value.round()),
+      );
+    }
+  } on FormatException {
+    return _normalizedReminderOffsets([fallback]);
+  }
+  return _normalizedReminderOffsets([fallback]);
+}
+
 String _importBatchSummaryText(String? summaryJson) {
   if (summaryJson == null || summaryJson.isEmpty) {
     return 'Imported batch';
@@ -1272,7 +1609,9 @@ String _importBatchSummaryText(String? summaryJson) {
     if (summary is Map<String, Object?>) {
       return [
         if (summary['courses'] != null) '${summary['courses']} parsed',
+        if (summary['exams'] != null) '${summary['exams']} exams',
         if (summary['added'] != null) '${summary['added']} added',
+        if (summary['skipped'] != null) '${summary['skipped']} skipped',
         if (summary['diffs'] != null) '${summary['diffs']} diffs',
         if (summary['conflicts'] != null) '${summary['conflicts']} conflicts',
       ].join(' - ');
@@ -1281,14 +1620,6 @@ String _importBatchSummaryText(String? summaryJson) {
     return summaryJson;
   }
   return summaryJson;
-}
-
-List<CourseSlot> _slotsFromSessions(List<db_time.ClassSessionInfo> sessions) {
-  final colorByIdentity = _courseColorsForSessions(sessions);
-  return [
-    for (final session in sessions)
-      _slotFromSession(session, colorByIdentity: colorByIdentity),
-  ];
 }
 
 Map<String, Color> _courseColorsForSessions(
@@ -1304,6 +1635,7 @@ CourseSlot _slotFromSession(
   required Map<String, Color> colorByIdentity,
 }) {
   final identityKey = _courseIdentityKeyForName(session.courseName);
+  final timeRange = _timeRangeFromSession(session);
   return CourseSlot(
     id: '${session.courseId}:${session.sessionId}',
     courseId: session.courseId,
@@ -1312,14 +1644,92 @@ CourseSlot _slotFromSession(
     teacher: session.teacher ?? '',
     location: session.location ?? '',
     weekday: session.weekday,
-    startPeriod: session.startSection,
-    endPeriod: session.endSection,
+    timeRange: timeRange,
     startWeek: session.weekStart,
     endWeek: session.weekEnd,
     parity: _fromDatabaseParity(session.weekParity),
     color: colorByIdentity[identityKey] ?? _courseColorForIdentity(identityKey),
     notes: session.note ?? '',
   );
+}
+
+CourseTimeRange _timeRangeFromSession(db_time.ClassSessionInfo session) {
+  return session.startMinuteOfDay != null && session.endMinuteOfDay != null
+      ? CourseTimeRange.fromClockTimes(
+          startMinuteOfDay: session.startMinuteOfDay!,
+          endMinuteOfDay: session.endMinuteOfDay!,
+        )
+      : CourseTimeRange.fromPeriods(session.startSection, session.endSection);
+}
+
+CourseSlot _slotFromExamSchedule(
+  ExamSchedule exam, {
+  required Map<String, Color> courseColorByIdentity,
+}) {
+  final timeRange = CourseTimeRange.fromClockTimes(
+    startMinuteOfDay: _minuteOfDay(exam.startAt),
+    endMinuteOfDay: _minuteOfDay(exam.endAt),
+  );
+  final identityKey = _courseIdentityKeyForName(exam.courseName);
+  final color =
+      courseColorByIdentity[identityKey] ??
+      _courseColorForIdentity('exam:$identityKey');
+  return CourseSlot(
+    id: 'exam:${exam.id}',
+    examId: exam.id,
+    name: exam.courseName,
+    teacher: exam.examRound,
+    location: _examLocationLabel(exam),
+    weekday: exam.weekday,
+    timeRange: timeRange,
+    startWeek: exam.semesterWeek,
+    endWeek: exam.semesterWeek,
+    parity: WeekParity.all,
+    color: color,
+    notes: _examNotesLabel(exam),
+    hidden: exam.isHidden,
+  );
+}
+
+int _minuteOfDay(DateTime value) => value.hour * 60 + value.minute;
+
+DateTime _dateTimeAtMinute(DateTime date, int minuteOfDay) {
+  return DateTime(
+    date.year,
+    date.month,
+    date.day,
+    minuteOfDay ~/ 60,
+    minuteOfDay % 60,
+  );
+}
+
+String _examLocationLabel(ExamSchedule exam) {
+  final parts = [
+    if ((exam.location ?? '').trim().isNotEmpty) exam.location!.trim(),
+    if ((exam.seatNumber ?? '').trim().isNotEmpty) exam.seatNumber!.trim(),
+  ];
+  return parts.join(' - ');
+}
+
+String _examNotesLabel(ExamSchedule exam) {
+  final parts = [
+    _formatExamDateTime(exam.startAt, exam.endAt),
+    if ((exam.assessmentMethod ?? '').trim().isNotEmpty)
+      exam.assessmentMethod!.trim(),
+    if ((exam.courseCode ?? '').trim().isNotEmpty) exam.courseCode!.trim(),
+    if (exam.importBatchId == null && (exam.rawText ?? '').trim().isNotEmpty)
+      exam.rawText!.trim(),
+  ];
+  return parts.join(' - ');
+}
+
+String _formatExamDateTime(DateTime startAt, DateTime endAt) {
+  String twoDigits(int value) => value.toString().padLeft(2, '0');
+  final date =
+      '${startAt.year}-${twoDigits(startAt.month)}-${twoDigits(startAt.day)}';
+  final start = '${twoDigits(startAt.hour)}:${twoDigits(startAt.minute)}';
+  final end = '${twoDigits(endAt.hour)}:${twoDigits(endAt.minute)}';
+  return '$date $start-$end';
 }
 
 CourseSlotDraft _draftFromParsedCourse(
@@ -1334,8 +1744,7 @@ CourseSlotDraft _draftFromParsedCourse(
     teacher: parsed.teacher,
     location: parsed.location,
     weekday: parsed.weekday,
-    startPeriod: parsed.period.start,
-    endPeriod: parsed.period.end,
+    timeRange: parsed.timeRange,
     startWeek: parsed.weeks.weeks.isEmpty ? 1 : parsed.weeks.weeks.first,
     endWeek: parsed.weeks.weeks.isEmpty ? 1 : parsed.weeks.weeks.last,
     parity: _fromImportParity(parsed.weeks.parity),

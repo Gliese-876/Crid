@@ -5,6 +5,7 @@ import 'package:crid/features/import/presentation/conflict_diff_page.dart';
 import 'package:crid/features/import/presentation/import_center_page.dart';
 import 'package:crid/features/settings/presentation/export_page.dart';
 import 'package:crid/features/settings/presentation/settings_page.dart';
+import 'package:crid/features/settings/presentation/third_party_licenses_page.dart';
 import 'package:crid/features/timetable/presentation/plan_management_page.dart';
 import 'package:crid/features/timetable/presentation/timetable_home_page.dart';
 import 'package:crid/l10n/l10n.dart';
@@ -77,6 +78,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           title: context.l10n.navSettings,
           child: const SettingsPage(),
         ),
+      ),
+      GoRoute(
+        path: '/licenses',
+        pageBuilder: (context, state) => _overlayPage(
+          state,
+          title: context.l10n.thirdPartyLicenses,
+          child: const OpenSourceLicensesPage(),
+        ),
+        routes: [
+          GoRoute(
+            path: ':packageName',
+            pageBuilder: (context, state) {
+              final packageName = state.pathParameters['packageName'] ?? '';
+              return _overlayPage(
+                state,
+                title: packageName == 'Crid'
+                    ? context.l10n.appLicenseDisplayName
+                    : packageName,
+                child: OpenSourceLicenseDetailsPage(packageName: packageName),
+              );
+            },
+          ),
+        ],
       ),
     ],
     errorBuilder: (context, state) => const _RouteNotFoundPage(),

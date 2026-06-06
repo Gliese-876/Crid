@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:crid/app/app_state.dart';
 import 'package:crid/app/motion.dart';
+import 'package:crid/core/time/period.dart';
 import 'package:crid/core/theme/course_colors.dart';
 import 'package:crid/features/settings/data/china_holiday_service.dart';
 import 'package:crid/features/settings/data/holiday_settings_controller.dart';
@@ -15,8 +17,10 @@ import 'package:crid/l10n/app_localizations.dart';
 import 'package:crid/features/timetable/presentation/course_slot_model.dart';
 import 'package:crid/l10n/l10n.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image/image.dart' as img;
 import 'package:intl/intl.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path/path.dart' as p;
@@ -209,22 +213,30 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       settings: holidaySettings,
       schedule: holidaySchedule,
     );
+    final visibleCourses = snapshot.courses
+        .where((course) => course.isActiveInWeek(week))
+        .where(
+          (course) => !_isHiddenByHoliday(
+            course: course,
+            dates: dates,
+            settings: holidaySettings,
+            schedule: holidaySchedule,
+          ),
+        )
+        .toList();
     final bytes = await _renderWeekPng(
       theme: theme,
       week: week,
       title: '${snapshot.activeSemester.name} / ${snapshot.activePlan.name}',
       subtitle: l10n.weekNumber(week),
       monthLabel: _monthLabelForLocale(locale, dates),
-      courses: snapshot.courses
-          .where((course) => course.isActiveInWeek(week))
-          .where(
-            (course) => !_isHiddenByHoliday(
-              course: course,
-              dates: dates,
-              settings: holidaySettings,
-              schedule: holidaySchedule,
-            ),
-          ),
+      courses: visibleCourses,
+      holidayMutedCourseIds: _holidayMutedCourseIds(
+        courses: visibleCourses,
+        dates: dates,
+        settings: holidaySettings,
+        schedule: holidaySchedule,
+      ),
       dayLabels: dayLabels,
       dates: dates,
       holidayRestDays: holidayRestDays,
@@ -352,16 +364,53 @@ Future<void> _openExportedFile(
   );
 }
 
+HolidayCourseDisplayMode _holidayDisplayMode({
+  required CourseSlot course,
+  required List<DateTime> dates,
+  required HolidaySettings settings,
+  required ChinaHolidaySchedule schedule,
+}) {
+  return holidayCourseDisplayModeForWeekday(
+    weekday: course.weekday,
+    isExam: course.isExam,
+    dates: dates,
+    settings: settings,
+    schedule: schedule,
+  );
+}
+
 bool _isHiddenByHoliday({
   required CourseSlot course,
   required List<DateTime> dates,
   required HolidaySettings settings,
   required ChinaHolidaySchedule schedule,
 }) {
-  if (course.weekday < 1 || course.weekday > dates.length) {
-    return false;
-  }
-  return schedule.shouldHide(dates[course.weekday - 1], settings);
+  return _holidayDisplayMode(
+        course: course,
+        dates: dates,
+        settings: settings,
+        schedule: schedule,
+      ) ==
+      HolidayCourseDisplayMode.hidden;
+}
+
+Set<String> _holidayMutedCourseIds({
+  required Iterable<CourseSlot> courses,
+  required List<DateTime> dates,
+  required HolidaySettings settings,
+  required ChinaHolidaySchedule schedule,
+}) {
+  return {
+    for (final course in courses)
+      if (_holidayDisplayMode(
+            course: course,
+            dates: dates,
+            settings: settings,
+            schedule: schedule,
+          ) ==
+          HolidayCourseDisplayMode.muted)
+        course.id,
+  };
 }
 
 List<DateTime> _datesForWeek({
@@ -400,6 +449,61 @@ List<int> debugSemesterExportWeeks(TimetableSnapshot snapshot) {
   return _semesterExportWeeks(snapshot);
 }
 
+TimetableImageExportTimeRange debugWeekImageExportTimeRange(
+  Iterable<CourseSlot> courses,
+) {
+  return _weekImageExportTimeRange(courses);
+}
+
+int debugWeekImageExportPixelWidth() {
+  return _exportScaledImageDimension(
+    _exportImageWidth,
+    _exportWeekImagePixelRatio,
+  );
+}
+
+int debugSemesterWeekImageExportPixelWidth() {
+  return _exportScaledImageDimension(
+    _exportImageWidth,
+    _exportSemesterWeekImagePixelRatio,
+  );
+}
+
+class TimetableImageExportTimeRange {
+  const TimetableImageExportTimeRange({
+    required this.startMinute,
+    required this.endMinute,
+  }) : assert(startMinute >= 0),
+       assert(endMinute > startMinute),
+       assert(endMinute <= minutesPerDay);
+
+  final int startMinute;
+  final int endMinute;
+
+  int get durationMinutes => endMinute - startMinute;
+}
+
+const _exportImageWidth = 2400.0;
+const _exportWeekImagePixelRatio = 2.0;
+const _exportSemesterWeekImagePixelRatio = 1.25;
+const _exportHorizontalPadding = 64.0;
+const _exportTitleTop = 36.0;
+const _exportSubtitleTop = 84.0;
+const _exportGridTop = 150.0;
+const _exportHeaderHeight = 82.0;
+const _exportHeaderWeekdayTop = 14.0;
+const _exportHeaderDateTop = 48.0;
+const _exportTodayCircleCenterY = 58.0;
+const _exportTodayCircleRadius = 15.0;
+const _exportGutterWidth = 108.0;
+const _exportHourHeight = 72.0;
+const _exportBottomPadding = 48.0;
+const _exportSemesterWeekGap = 28.0;
+const _exportSemesterSidePadding = 40.0;
+const _exportSemesterPngCompressionLevel = 4;
+const _exportMinimumCourseBlockHeight = 36.0;
+const _exportCourseBlockVerticalInset = 1.0;
+
 Future<Uint8List> _renderWeekPng({
   required ThemeData theme,
   required int week,
@@ -407,31 +511,45 @@ Future<Uint8List> _renderWeekPng({
   required String subtitle,
   required String monthLabel,
   required Iterable<CourseSlot> courses,
+  required Set<String> holidayMutedCourseIds,
   required List<String> dayLabels,
   required List<DateTime> dates,
   required List<bool> holidayRestDays,
   required String Function(CourseSlot course) weekLabelFor,
+  double pixelRatio = _exportWeekImagePixelRatio,
 }) async {
-  const width = 1600.0;
-  const height = 1000.0;
-  const left = 120.0;
-  const top = 150.0;
-  const headerHeight = 54.0;
-  const rowHeight = 66.0;
-  const dayWidth = (width - left - 48) / 7;
+  assert(pixelRatio > 0);
+  final courseList = courses.toList();
+  final timeRange = _weekImageExportTimeRange(courseList);
+  const width = _exportImageWidth;
+  const gridLeft = _exportHorizontalPadding;
+  const gridRight = width - _exportHorizontalPadding;
+  const gridTop = _exportGridTop;
+  const headerHeight = _exportHeaderHeight;
+  const gutterWidth = _exportGutterWidth;
+  const hourHeight = _exportHourHeight;
+  final gridWidth = gridRight - gridLeft;
+  final bodyTop = gridTop + headerHeight;
+  final bodyHeight = _exportTimelineBodyHeight(timeRange, hourHeight);
+  final height = bodyTop + bodyHeight + _exportBottomPadding;
+  final dayGridLeft = gridLeft + gutterWidth;
+  final dayWidth = (gridWidth - gutterWidth) / 7;
+  final imageWidth = _exportScaledImageDimension(width, pixelRatio);
+  final imageHeight = _exportScaledImageDimension(height, pixelRatio);
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
+  canvas.scale(pixelRatio);
   final colorScheme = theme.colorScheme;
   final timeColumnColor = colorScheme.brightness == Brightness.light
       ? colorScheme.surfaceContainerLow
       : colorScheme.surfaceContainerHighest;
 
   final paint = Paint()..color = colorScheme.surfaceContainerLowest;
-  canvas.drawRect(const Rect.fromLTWH(0, 0, width, height), paint);
+  canvas.drawRect(Rect.fromLTWH(0, 0, width, height), paint);
   _drawText(
     canvas,
     title,
-    const Offset(48, 36),
+    const Offset(_exportHorizontalPadding, _exportTitleTop),
     34,
     colorScheme.onSurface,
     FontWeight.w700,
@@ -439,87 +557,58 @@ Future<Uint8List> _renderWeekPng({
   _drawText(
     canvas,
     subtitle,
-    const Offset(48, 84),
+    const Offset(_exportHorizontalPadding, _exportSubtitleTop),
     22,
     colorScheme.onSurfaceVariant,
     FontWeight.w500,
   );
 
-  const periods = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-  const times = [
-    '08:00',
-    '08:55',
-    '10:00',
-    '10:55',
-    '13:30',
-    '14:25',
-    '15:30',
-    '16:25',
-    '18:00',
-    '18:55',
-    '19:50',
-    '20:45',
-  ];
-
   final gridPaint = Paint()
     ..color = colorScheme.outlineVariant
-    ..strokeWidth = 1;
+    ..strokeWidth = 1
+    ..style = PaintingStyle.stroke;
   canvas.drawRect(
-    Rect.fromLTWH(48, top, width - 96, headerHeight),
+    Rect.fromLTWH(gridLeft, gridTop, gridWidth, headerHeight),
     Paint()..color = colorScheme.surfaceContainerHighest,
   );
   canvas.drawRect(
-    Rect.fromLTWH(
-      48,
-      top + headerHeight,
-      left - 48,
-      rowHeight * periods.length,
-    ),
+    Rect.fromLTWH(gridLeft, bodyTop, gutterWidth, bodyHeight),
     Paint()..color = timeColumnColor,
   );
   canvas.drawRect(
-    Rect.fromLTWH(
-      left,
-      top + headerHeight,
-      width - left - 48,
-      rowHeight * periods.length,
-    ),
+    Rect.fromLTWH(dayGridLeft, bodyTop, gridRight - dayGridLeft, bodyHeight),
     Paint()..color = colorScheme.surfaceContainerHigh,
   );
   for (var day = 0; day < DateTime.daysPerWeek; day++) {
     if (!_isHolidayRestDay(holidayRestDays, day)) {
       continue;
     }
-    final x = left + dayWidth * day;
+    final x = dayGridLeft + dayWidth * day;
     canvas.drawRect(
-      Rect.fromLTWH(
-        x,
-        top,
-        dayWidth,
-        headerHeight + rowHeight * periods.length,
-      ),
+      Rect.fromLTWH(x, gridTop, dayWidth, headerHeight + bodyHeight),
       Paint()..color = _holidayRestColumnColor(colorScheme),
     );
   }
-  _drawText(
+  _drawTextInRect(
     canvas,
     monthLabel,
-    const Offset(64, top + 17),
+    Rect.fromLTWH(gridLeft, gridTop, gutterWidth, headerHeight),
     16,
     colorScheme.onSurfaceVariant,
     FontWeight.w700,
-    maxWidth: left - 80,
     maxLines: 1,
+    textAlign: TextAlign.center,
   );
   for (var day = 0; day < dayLabels.length; day++) {
     final date = day < dates.length ? dates[day] : null;
     final isToday = date != null && DateUtils.isSameDay(date, DateTime.now());
     final holidayRestDay = _isHolidayRestDay(holidayRestDays, day);
-    final centerX = left + dayWidth * day + dayWidth / 2;
+    final cellLeft = dayGridLeft + dayWidth * day;
+    final centerX = cellLeft + dayWidth / 2;
     _drawText(
       canvas,
       dayLabels[day],
-      Offset(centerX - 30, top + 8),
+      Offset(cellLeft, gridTop + _exportHeaderWeekdayTop),
       17,
       isToday
           ? colorScheme.primary
@@ -527,99 +616,152 @@ Future<Uint8List> _renderWeekPng({
           ? colorScheme.onSurfaceVariant
           : colorScheme.onSurface,
       isToday || holidayRestDay ? FontWeight.w700 : FontWeight.w500,
-      maxWidth: 60,
+      maxWidth: dayWidth,
       maxLines: 1,
+      textAlign: TextAlign.center,
     );
     if (date != null) {
       if (isToday) {
         canvas.drawCircle(
-          Offset(centerX, top + 38),
-          14,
+          Offset(centerX, gridTop + _exportTodayCircleCenterY),
+          _exportTodayCircleRadius,
           Paint()..color = colorScheme.primary,
         );
       }
       _drawText(
         canvas,
         '${date.day}',
-        Offset(centerX - 14, top + 28),
+        Offset(cellLeft, gridTop + _exportHeaderDateTop),
         14,
         isToday ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
         isToday || holidayRestDay ? FontWeight.w700 : FontWeight.w500,
-        maxWidth: 28,
+        maxWidth: dayWidth,
         maxLines: 1,
+        textAlign: TextAlign.center,
       );
     }
   }
-  for (var row = 0; row < periods.length; row++) {
-    final y = top + headerHeight + rowHeight * row;
-    canvas.drawLine(Offset(48, y), Offset(width - 48, y), gridPaint);
-    _drawText(
+
+  for (final segment in _exportTimeColumnSegments(timeRange: timeRange)) {
+    final startY =
+        bodyTop +
+        _exportMinuteOffset(segment.startMinute, timeRange, hourHeight);
+    final endY =
+        bodyTop + _exportMinuteOffset(segment.endMinute, timeRange, hourHeight);
+    final rect = Rect.fromLTRB(gridLeft, startY, dayGridLeft, endY);
+    canvas.drawRect(rect, Paint()..color = timeColumnColor);
+    canvas.drawRect(rect, gridPaint);
+    canvas.save();
+    canvas.clipRect(rect);
+    _drawTextInRect(
       canvas,
-      '${periods[row]}',
-      Offset(78, y + 18),
-      19,
+      segment.label,
+      rect.deflate(6),
+      13,
       colorScheme.onSurface,
-      FontWeight.w700,
-      maxWidth: 32,
-      maxLines: 1,
+      FontWeight.w600,
+      maxLines: 3,
+      textAlign: TextAlign.center,
     );
-    _drawText(
-      canvas,
-      times[row],
-      Offset(66, y + 43),
-      14,
-      colorScheme.onSurfaceVariant,
-      FontWeight.w400,
-      maxWidth: 56,
-      maxLines: 1,
-    );
+    canvas.restore();
+  }
+
+  for (final minute in _exportTimelineGuideMinutes(timeRange)) {
+    final y = bodyTop + _exportMinuteOffset(minute, timeRange, hourHeight);
+    canvas.drawLine(Offset(gridLeft, y), Offset(gridRight, y), gridPaint);
   }
   for (var day = 0; day <= 7; day++) {
-    final x = left + dayWidth * day;
+    final x = dayGridLeft + dayWidth * day;
     canvas.drawLine(
-      Offset(x, top),
-      Offset(x, top + headerHeight + rowHeight * periods.length),
+      Offset(x, gridTop),
+      Offset(x, bodyTop + bodyHeight),
       gridPaint,
     );
   }
+  canvas.drawLine(
+    Offset(gridLeft, gridTop),
+    Offset(gridRight, gridTop),
+    gridPaint,
+  );
+  canvas.drawLine(
+    Offset(gridLeft, bodyTop),
+    Offset(gridRight, bodyTop),
+    gridPaint,
+  );
+  canvas.drawLine(
+    Offset(gridLeft, bodyTop + bodyHeight),
+    Offset(gridRight, bodyTop + bodyHeight),
+    gridPaint,
+  );
 
-  for (final layout in _exportCourseBlockLayouts(courses.toList())) {
+  for (final layout in _exportCourseBlockLayouts(courseList)) {
     final course = layout.course;
     if (course.weekday < 1 || course.weekday > 7) {
       continue;
     }
     final columnCount = layout.overlapCount < 1 ? 1 : layout.overlapCount;
-    final columnGap = columnCount > 1 ? 3.0 : 0.0;
-    final availableWidth = dayWidth - 16;
+    final columnGap = columnCount > 1 ? 2.0 : 0.0;
+    final availableWidth = dayWidth - 4;
     final blockWidth =
         (availableWidth - columnGap * (columnCount - 1)) / columnCount;
-    final start = course.startPeriod.clamp(1, periods.length).toInt();
-    final end = course.endPeriod.clamp(start, periods.length).toInt();
-    final row = start - 1;
-    final blockHeight = rowHeight * (end - start + 1) - 16;
+    final startMinute = course.startMinuteOfDay
+        .clamp(timeRange.startMinute, timeRange.endMinute - 1)
+        .toInt();
+    final endMinute = course.endMinuteOfDay
+        .clamp(startMinute + 1, timeRange.endMinute)
+        .toInt();
+    final blockTop = _exportMinuteOffset(startMinute, timeRange, hourHeight);
+    final naturalBlockHeight = math.max(
+      _exportMinimumCourseBlockHeight,
+      _exportMinuteOffset(endMinute, timeRange, hourHeight) -
+          _exportMinuteOffset(startMinute, timeRange, hourHeight) -
+          _exportCourseBlockVerticalInset * 2,
+    );
+    final maxBlockHeight = math.max(
+      1.0,
+      bodyHeight - blockTop - _exportCourseBlockVerticalInset,
+    );
+    final blockHeight = naturalBlockHeight
+        .clamp(1.0, maxBlockHeight)
+        .toDouble();
     final x =
-        left +
+        dayGridLeft +
         dayWidth * (course.weekday - 1) +
-        8 +
+        2 +
         (blockWidth + columnGap) * layout.overlapIndex;
-    final y = top + headerHeight + rowHeight * row + 8;
+    final y = bodyTop + blockTop + _exportCourseBlockVerticalInset;
     final rect = RRect.fromRectAndRadius(
       Rect.fromLTWH(x, y, blockWidth, blockHeight),
-      const Radius.circular(10),
+      const Radius.circular(8),
     );
-    canvas.drawRRect(rect, Paint()..color = course.color);
+    final mutedByHoliday = holidayMutedCourseIds.contains(course.id);
+    final blockColor = mutedByHoliday
+        ? _holidayMutedCourseColor(colorScheme)
+        : course.color;
+    canvas.drawRRect(rect, Paint()..color = blockColor);
+    if (mutedByHoliday) {
+      canvas.drawRRect(
+        rect.deflate(0.5),
+        Paint()
+          ..color = colorScheme.outlineVariant.withValues(alpha: 0.72)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1,
+      );
+    }
     canvas.save();
     canvas.clipRRect(rect);
-    final textColor = readableCourseTextColor(course.color);
-    var cursorY = y + 12;
+    final textColor = mutedByHoliday
+        ? colorScheme.onSurfaceVariant
+        : readableCourseTextColor(course.color);
+    var cursorY = y + 6;
     cursorY += _drawText(
       canvas,
       course.name,
-      Offset(x + 14, cursorY),
+      Offset(x + 7, cursorY),
       18,
       textColor,
       FontWeight.w700,
-      maxWidth: blockWidth - 28,
+      maxWidth: blockWidth - 14,
       maxLines: blockHeight < 88 ? 1 : 2,
     );
     final details = [
@@ -628,17 +770,17 @@ Future<Uint8List> _renderWeekPng({
       if (week == 0 && blockHeight >= 106) weekLabelFor(course),
     ];
     for (final detail in details) {
-      if (cursorY + 18 > y + blockHeight - 8) {
+      if (cursorY + 16 > y + blockHeight - 6) {
         break;
       }
       cursorY += _drawText(
         canvas,
         detail,
-        Offset(x + 14, cursorY + 3),
+        Offset(x + 7, cursorY + 2),
         13,
         textColor,
         FontWeight.w500,
-        maxWidth: blockWidth - 28,
+        maxWidth: blockWidth - 14,
         maxLines: 1,
       );
     }
@@ -646,7 +788,7 @@ Future<Uint8List> _renderWeekPng({
   }
 
   final picture = recorder.endRecording();
-  final image = await picture.toImage(width.toInt(), height.toInt());
+  final image = await picture.toImage(imageWidth, imageHeight);
   final data = await image.toByteData(format: ui.ImageByteFormat.png);
   return data!.buffer.asUint8List();
 }
@@ -664,25 +806,33 @@ Future<Uint8List> _renderSemesterPng({
   required String Function(CourseSlot course) weekLabelFor,
   required String Function(int week) weekTitleFor,
 }) async {
-  final weekImages = <ui.Image>[];
+  final weekImages = <_EncodedWeekImage>[];
   for (final week in weeks) {
     final dates = _datesForWeek(firstWeekMonday: firstWeekMonday, week: week);
+    final visibleCourses = courses
+        .where((course) => course.isActiveInWeek(week))
+        .where(
+          (course) => !_isHiddenByHoliday(
+            course: course,
+            dates: dates,
+            settings: holidaySettings,
+            schedule: holidaySchedule,
+          ),
+        )
+        .toList();
     final bytes = await _renderWeekPng(
       theme: theme,
       week: week,
       title: title,
       subtitle: weekTitleFor(week),
       monthLabel: monthLabelFor(dates),
-      courses: courses
-          .where((course) => course.isActiveInWeek(week))
-          .where(
-            (course) => !_isHiddenByHoliday(
-              course: course,
-              dates: dates,
-              settings: holidaySettings,
-              schedule: holidaySchedule,
-            ),
-          ),
+      courses: visibleCourses,
+      holidayMutedCourseIds: _holidayMutedCourseIds(
+        courses: visibleCourses,
+        dates: dates,
+        settings: holidaySettings,
+        schedule: holidaySchedule,
+      ),
       dayLabels: dayLabels,
       holidayRestDays: holidayRestDayFlags(
         dates: dates,
@@ -691,35 +841,443 @@ Future<Uint8List> _renderSemesterPng({
       ),
       dates: dates,
       weekLabelFor: weekLabelFor,
+      pixelRatio: _exportSemesterWeekImagePixelRatio,
     );
-    final codec = await ui.instantiateImageCodec(bytes);
-    final frame = await codec.getNextFrame();
-    weekImages.add(frame.image);
+    final decodeInfo = img.PngDecoder().startDecode(bytes);
+    if (decodeInfo == null) {
+      throw StateError('Unable to inspect rendered timetable week image.');
+    }
+    weekImages.add(
+      _EncodedWeekImage(
+        bytes: bytes,
+        width: decodeInfo.width,
+        height: decodeInfo.height,
+      ),
+    );
+    await Future<void>.delayed(Duration.zero);
   }
 
-  const gap = 28;
+  final gap = _exportScaledImageDimension(
+    _exportSemesterWeekGap,
+    _exportSemesterWeekImagePixelRatio,
+  );
   final width = weekImages.fold<int>(
     1,
     (maxWidth, image) => math.max(maxWidth, image.width),
   );
+  final sidePadding = _exportScaledImageDimension(
+    _exportSemesterSidePadding,
+    _exportSemesterWeekImagePixelRatio,
+  );
+  final canvasWidth = width + sidePadding * 2;
   final height =
       weekImages.fold<int>(0, (sum, image) => sum + image.height) +
       math.max(0, weekImages.length - 1) * gap;
-  final recorder = ui.PictureRecorder();
-  final canvas = Canvas(recorder);
-  canvas.drawRect(
-    Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
-    Paint()..color = theme.colorScheme.surfaceContainerLowest,
+  final request = _SemesterPngEncodeRequest(
+    images: [
+      for (final image in weekImages)
+        _EncodedWeekImagePayload(
+          bytes: TransferableTypedData.fromList([image.bytes]),
+          width: image.width,
+          height: image.height,
+        ),
+    ],
+    canvasWidth: canvasWidth,
+    canvasHeight: height,
+    gap: gap,
+    sidePadding: sidePadding,
+    backgroundRgba: _rgbaIntFromFlutterColor(
+      theme.colorScheme.surfaceContainerLowest,
+    ),
   );
-  var top = 0.0;
-  for (final image in weekImages) {
-    canvas.drawImage(image, Offset(0, top), Paint());
-    top += image.height + gap;
+  return compute(
+    _encodeSemesterPngInBackground,
+    request,
+    debugLabel: 'semester-image-png-encode',
+  );
+}
+
+class _EncodedWeekImage {
+  const _EncodedWeekImage({
+    required this.bytes,
+    required this.width,
+    required this.height,
+  });
+
+  final Uint8List bytes;
+  final int width;
+  final int height;
+}
+
+@visibleForTesting
+Uint8List debugEncodeStackedSemesterPngForTest({
+  required List<Uint8List> weekPngs,
+  required int gap,
+  required int sidePadding,
+  required Color backgroundColor,
+}) {
+  final images = <_EncodedWeekImagePayload>[];
+  var width = 1;
+  var height = math.max(0, weekPngs.length - 1) * gap;
+  for (final bytes in weekPngs) {
+    final decodeInfo = img.PngDecoder().startDecode(bytes);
+    if (decodeInfo == null) {
+      throw StateError('Unable to inspect rendered timetable week image.');
+    }
+    width = math.max(width, decodeInfo.width);
+    height += decodeInfo.height;
+    images.add(
+      _EncodedWeekImagePayload(
+        bytes: TransferableTypedData.fromList([bytes]),
+        width: decodeInfo.width,
+        height: decodeInfo.height,
+      ),
+    );
   }
-  final picture = recorder.endRecording();
-  final image = await picture.toImage(width, height);
-  final data = await image.toByteData(format: ui.ImageByteFormat.png);
-  return data!.buffer.asUint8List();
+  return _encodeSemesterPngInBackground(
+    _SemesterPngEncodeRequest(
+      images: images,
+      canvasWidth: width + sidePadding * 2,
+      canvasHeight: height,
+      gap: gap,
+      sidePadding: sidePadding,
+      backgroundRgba: _rgbaIntFromFlutterColor(backgroundColor),
+    ),
+  );
+}
+
+class _SemesterPngEncodeRequest {
+  const _SemesterPngEncodeRequest({
+    required this.images,
+    required this.canvasWidth,
+    required this.canvasHeight,
+    required this.gap,
+    required this.sidePadding,
+    required this.backgroundRgba,
+  });
+
+  final List<_EncodedWeekImagePayload> images;
+  final int canvasWidth;
+  final int canvasHeight;
+  final int gap;
+  final int sidePadding;
+  final int backgroundRgba;
+}
+
+class _EncodedWeekImagePayload {
+  const _EncodedWeekImagePayload({
+    required this.bytes,
+    required this.width,
+    required this.height,
+  });
+
+  final TransferableTypedData bytes;
+  final int width;
+  final int height;
+}
+
+Uint8List _encodeSemesterPngInBackground(_SemesterPngEncodeRequest request) {
+  final output = BytesBuilder(copy: false)
+    ..add(const [137, 80, 78, 71, 13, 10, 26, 10]);
+  final ihdr = Uint8List(13);
+  final ihdrData = ByteData.sublistView(ihdr)
+    ..setUint32(0, request.canvasWidth)
+    ..setUint32(4, request.canvasHeight);
+  ihdrData
+    ..setUint8(8, 8)
+    ..setUint8(9, 6)
+    ..setUint8(10, 0)
+    ..setUint8(11, 0)
+    ..setUint8(12, 0);
+  _writePngChunk(output, 'IHDR', ihdr);
+
+  final idatSink = ByteConversionSink.withCallback((compressedBytes) {
+    _writePngChunk(output, 'IDAT', compressedBytes);
+  });
+  final zlibSink = ZLibEncoder(
+    level: _exportSemesterPngCompressionLevel,
+  ).startChunkedConversion(idatSink);
+  final backgroundRow = _pngBackgroundRow(
+    width: request.canvasWidth,
+    rgba: request.backgroundRgba,
+  );
+  final compositedRow = Uint8List(backgroundRow.length);
+  for (var imageIndex = 0; imageIndex < request.images.length; imageIndex++) {
+    final payload = request.images[imageIndex];
+    final encodedBytes = payload.bytes.materialize().asUint8List();
+    final image = img.decodePng(encodedBytes);
+    if (image == null) {
+      throw StateError('Unable to decode rendered timetable week image.');
+    }
+    if (image.width != payload.width || image.height != payload.height) {
+      throw StateError('Decoded timetable week image changed dimensions.');
+    }
+    final rgbaBytes = image.getBytes(order: img.ChannelOrder.rgba);
+    final sourceStride = image.width * 4;
+    final destinationStart = 1 + request.sidePadding * 4;
+    for (var rowIndex = 0; rowIndex < image.height; rowIndex++) {
+      compositedRow.setAll(0, backgroundRow);
+      compositedRow.setRange(
+        destinationStart,
+        destinationStart + sourceStride,
+        rgbaBytes,
+        rowIndex * sourceStride,
+      );
+      zlibSink.add(compositedRow);
+    }
+    if (imageIndex < request.images.length - 1) {
+      _addPngRows(zlibSink, backgroundRow, request.gap);
+    }
+  }
+  zlibSink.close();
+  _writePngChunk(output, 'IEND', const []);
+  return output.takeBytes();
+}
+
+Uint8List _pngBackgroundRow({required int width, required int rgba}) {
+  final row = Uint8List(1 + width * 4);
+  final r = (rgba >> 24) & 0xff;
+  final g = (rgba >> 16) & 0xff;
+  final b = (rgba >> 8) & 0xff;
+  final a = rgba & 0xff;
+  for (var index = 1; index < row.length; index += 4) {
+    row[index] = r;
+    row[index + 1] = g;
+    row[index + 2] = b;
+    row[index + 3] = a;
+  }
+  return row;
+}
+
+void _addPngRows(Sink<List<int>> sink, Uint8List row, int count) {
+  for (var index = 0; index < count; index++) {
+    sink.add(row);
+  }
+}
+
+void _writePngChunk(BytesBuilder output, String type, List<int> data) {
+  final typeBytes = ascii.encode(type);
+  output
+    ..add(_uint32Bytes(data.length))
+    ..add(typeBytes)
+    ..add(data)
+    ..add(_uint32Bytes(_pngCrc32(typeBytes, data)));
+}
+
+Uint8List _uint32Bytes(int value) {
+  final bytes = Uint8List(4);
+  ByteData.sublistView(bytes).setUint32(0, value);
+  return bytes;
+}
+
+int _pngCrc32(List<int> typeBytes, List<int> data) {
+  var crc = 0xffffffff;
+  for (final byte in typeBytes) {
+    crc = _crc32Table[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  }
+  for (final byte in data) {
+    crc = _crc32Table[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) & 0xffffffff;
+}
+
+final List<int> _crc32Table = _buildCrc32Table();
+
+List<int> _buildCrc32Table() {
+  return [for (var index = 0; index < 256; index++) _crc32TableEntry(index)];
+}
+
+int _crc32TableEntry(int value) {
+  var crc = value;
+  for (var bit = 0; bit < 8; bit++) {
+    crc = (crc & 1) != 0 ? 0xedb88320 ^ (crc >>> 1) : crc >>> 1;
+  }
+  return crc;
+}
+
+int _rgbaIntFromFlutterColor(Color color) {
+  return ((color.r * 255).round() << 24) |
+      ((color.g * 255).round() << 16) |
+      ((color.b * 255).round() << 8) |
+      (color.a * 255).round();
+}
+
+int _exportScaledImageDimension(double logicalSize, double pixelRatio) {
+  return math.max(1, (logicalSize * pixelRatio).ceil());
+}
+
+TimetableImageExportTimeRange _weekImageExportTimeRange(
+  Iterable<CourseSlot> courses,
+) {
+  final activeCourses = courses
+      .where((course) => course.weekday >= 1 && course.weekday <= 7)
+      .toList();
+  if (activeCourses.isEmpty) {
+    return TimetableImageExportTimeRange(
+      startMinute: defaultLessonTimeSlots.first.startMinuteOfDay,
+      endMinute: defaultLessonTimeSlots.last.endMinuteOfDay,
+    );
+  }
+
+  final startMinute = activeCourses
+      .map((course) => course.startMinuteOfDay)
+      .reduce(math.min)
+      .clamp(0, minutesPerDay - 1)
+      .toInt();
+  final endMinute = activeCourses
+      .map((course) => course.endMinuteOfDay)
+      .reduce(math.max)
+      .clamp(startMinute + 1, minutesPerDay)
+      .toInt();
+  return TimetableImageExportTimeRange(
+    startMinute: startMinute,
+    endMinute: endMinute,
+  );
+}
+
+double _exportTimelineBodyHeight(
+  TimetableImageExportTimeRange timeRange,
+  double hourHeight,
+) {
+  return timeRange.durationMinutes * hourHeight / 60;
+}
+
+double _exportMinuteOffset(
+  int minute,
+  TimetableImageExportTimeRange timeRange,
+  double hourHeight,
+) {
+  final visibleMinute = minute
+      .clamp(timeRange.startMinute, timeRange.endMinute)
+      .toInt();
+  return (visibleMinute - timeRange.startMinute) * hourHeight / 60;
+}
+
+class _ExportTimeColumnSegment {
+  const _ExportTimeColumnSegment({
+    required this.startMinute,
+    required this.endMinute,
+    required this.label,
+  });
+
+  final int startMinute;
+  final int endMinute;
+  final String label;
+}
+
+List<_ExportTimeColumnSegment> _exportTimeColumnSegments({
+  required TimetableImageExportTimeRange timeRange,
+}) {
+  final segments = <_ExportTimeColumnSegment>[];
+  _addExportWholeHourSegments(
+    segments,
+    startMinute: 0,
+    endMinute: defaultLessonTimeSlots.first.startMinuteOfDay,
+  );
+
+  for (var index = 0; index < defaultLessonTimeSlots.length; index++) {
+    final slot = defaultLessonTimeSlots[index];
+    segments.add(
+      _ExportTimeColumnSegment(
+        startMinute: slot.startMinuteOfDay,
+        endMinute: slot.endMinuteOfDay,
+        label: _exportLessonSlotLabel(slot),
+      ),
+    );
+    final nextIndex = index + 1;
+    if (nextIndex < defaultLessonTimeSlots.length) {
+      _addExportWholeHourSegments(
+        segments,
+        startMinute: slot.endMinuteOfDay,
+        endMinute: defaultLessonTimeSlots[nextIndex].startMinuteOfDay,
+      );
+    }
+  }
+
+  _addExportWholeHourSegments(
+    segments,
+    startMinute: defaultLessonTimeSlots.last.endMinuteOfDay,
+    endMinute: minutesPerDay,
+  );
+
+  return [
+    for (final segment in segments)
+      if (segment.startMinute < timeRange.endMinute &&
+          timeRange.startMinute < segment.endMinute)
+        _ExportTimeColumnSegment(
+          startMinute: math.max(segment.startMinute, timeRange.startMinute),
+          endMinute: math.min(segment.endMinute, timeRange.endMinute),
+          label: segment.label,
+        ),
+  ]..sort((a, b) => a.startMinute.compareTo(b.startMinute));
+}
+
+void _addExportWholeHourSegments(
+  List<_ExportTimeColumnSegment> segments, {
+  required int startMinute,
+  required int endMinute,
+}) {
+  final firstWholeHour = ((startMinute + 59) ~/ 60) * 60;
+  for (var minute = firstWholeHour; minute < endMinute; minute += 60) {
+    segments.add(
+      _ExportTimeColumnSegment(
+        startMinute: minute,
+        endMinute: math.min(minute + 60, endMinute),
+        label: _minuteLabel(minute),
+      ),
+    );
+  }
+}
+
+List<int> _exportTimelineGuideMinutes(TimetableImageExportTimeRange timeRange) {
+  final minutes = <int>{timeRange.startMinute, timeRange.endMinute};
+  _addExportWholeHourGuideMinutes(
+    minutes,
+    startMinute: 0,
+    endMinute: defaultLessonTimeSlots.first.startMinuteOfDay,
+  );
+  for (var index = 0; index < defaultLessonTimeSlots.length; index++) {
+    final slot = defaultLessonTimeSlots[index];
+    minutes
+      ..add(slot.startMinuteOfDay)
+      ..add(slot.endMinuteOfDay);
+    final nextIndex = index + 1;
+    if (nextIndex < defaultLessonTimeSlots.length) {
+      _addExportWholeHourGuideMinutes(
+        minutes,
+        startMinute: slot.endMinuteOfDay,
+        endMinute: defaultLessonTimeSlots[nextIndex].startMinuteOfDay,
+      );
+    }
+  }
+  _addExportWholeHourGuideMinutes(
+    minutes,
+    startMinute: defaultLessonTimeSlots.last.endMinuteOfDay,
+    endMinute: minutesPerDay,
+  );
+  return minutes
+      .where(
+        (minute) =>
+            minute >= timeRange.startMinute && minute <= timeRange.endMinute,
+      )
+      .toList()
+    ..sort();
+}
+
+void _addExportWholeHourGuideMinutes(
+  Set<int> minutes, {
+  required int startMinute,
+  required int endMinute,
+}) {
+  final firstWholeHour = ((startMinute + 59) ~/ 60) * 60;
+  for (var minute = firstWholeHour; minute <= endMinute; minute += 60) {
+    minutes.add(minute);
+  }
+}
+
+String _exportLessonSlotLabel(LessonTimeSlot slot) {
+  return '${slot.section}\n${_minuteLabel(slot.startMinuteOfDay)}-'
+      '${_minuteLabel(slot.endMinuteOfDay)}';
 }
 
 class _ExportCourseBlockLayout {
@@ -749,7 +1307,7 @@ List<_ExportCourseBlockLayout> _exportCourseBlockLayouts(
   for (final dayCourses in coursesByDay.values) {
     final sorted = [...dayCourses]..sort(_compareExportCourseBlocks);
     var group = <CourseSlot>[];
-    var groupEndPeriod = 0;
+    var groupEndMinute = 0;
 
     void flushGroup() {
       if (group.isEmpty) {
@@ -757,17 +1315,17 @@ List<_ExportCourseBlockLayout> _exportCourseBlockLayouts(
       }
       layouts.addAll(_assignExportOverlapLanes(group));
       group = <CourseSlot>[];
-      groupEndPeriod = 0;
+      groupEndMinute = 0;
     }
 
     for (final course in sorted) {
-      if (group.isEmpty || course.startPeriod <= groupEndPeriod) {
+      if (group.isEmpty || course.startMinuteOfDay < groupEndMinute) {
         group.add(course);
-        groupEndPeriod = math.max(groupEndPeriod, course.endPeriod);
+        groupEndMinute = math.max(groupEndMinute, course.endMinuteOfDay);
       } else {
         flushGroup();
         group.add(course);
-        groupEndPeriod = course.endPeriod;
+        groupEndMinute = course.endMinuteOfDay;
       }
     }
     flushGroup();
@@ -776,11 +1334,11 @@ List<_ExportCourseBlockLayout> _exportCourseBlockLayouts(
 }
 
 int _compareExportCourseBlocks(CourseSlot a, CourseSlot b) {
-  final byStart = a.startPeriod.compareTo(b.startPeriod);
+  final byStart = a.startMinuteOfDay.compareTo(b.startMinuteOfDay);
   if (byStart != 0) {
     return byStart;
   }
-  final byEnd = b.endPeriod.compareTo(a.endPeriod);
+  final byEnd = b.endMinuteOfDay.compareTo(a.endMinuteOfDay);
   if (byEnd != 0) {
     return byEnd;
   }
@@ -790,23 +1348,23 @@ int _compareExportCourseBlocks(CourseSlot a, CourseSlot b) {
 List<_ExportCourseBlockLayout> _assignExportOverlapLanes(
   List<CourseSlot> group,
 ) {
-  final laneEndPeriods = <int>[];
+  final laneEndMinutes = <int>[];
   final laneByCourse = <CourseSlot, int>{};
 
   for (final course in group) {
-    final lane = laneEndPeriods.indexWhere(
-      (endPeriod) => endPeriod < course.startPeriod,
+    final lane = laneEndMinutes.indexWhere(
+      (endMinute) => endMinute <= course.startMinuteOfDay,
     );
     if (lane == -1) {
-      laneByCourse[course] = laneEndPeriods.length;
-      laneEndPeriods.add(course.endPeriod);
+      laneByCourse[course] = laneEndMinutes.length;
+      laneEndMinutes.add(course.endMinuteOfDay);
     } else {
       laneByCourse[course] = lane;
-      laneEndPeriods[lane] = course.endPeriod;
+      laneEndMinutes[lane] = course.endMinuteOfDay;
     }
   }
 
-  final overlapCount = laneEndPeriods.length;
+  final overlapCount = laneEndMinutes.length;
   return [
     for (final course in group)
       _ExportCourseBlockLayout(
@@ -835,6 +1393,13 @@ String _monthLabelForLocale(Locale locale, List<DateTime> dates) {
   return DateFormat.MMMM(locale.toString()).format(monthDate);
 }
 
+String _minuteLabel(int minuteOfDay) {
+  final hour = minuteOfDay ~/ 60;
+  final minute = minuteOfDay % 60;
+  return '${hour.toString().padLeft(2, '0')}:'
+      '${minute.toString().padLeft(2, '0')}';
+}
+
 DateTime _monthDateForHeader(List<DateTime> dates) {
   final today = DateTime.now();
   for (final date in dates) {
@@ -856,6 +1421,15 @@ Color _holidayRestColumnColor(ColorScheme colorScheme) {
   return colorScheme.onSurface.withValues(alpha: alpha);
 }
 
+Color _holidayMutedCourseColor(ColorScheme colorScheme) {
+  return Color.alphaBlend(
+    colorScheme.onSurfaceVariant.withValues(
+      alpha: colorScheme.brightness == Brightness.light ? 0.12 : 0.18,
+    ),
+    colorScheme.surfaceContainerHighest,
+  );
+}
+
 String _weekLabelForImage(AppLocalizations l10n, CourseSlot course) {
   final base = l10n.weeksValue(course.startWeek, course.endWeek);
   return switch (course.parity) {
@@ -874,18 +1448,91 @@ double _drawText(
   FontWeight weight, {
   double maxWidth = 900,
   int maxLines = 2,
+  TextAlign textAlign = TextAlign.start,
 }) {
-  final painter = TextPainter(
+  final painter = _layoutExportText(
+    text,
+    fontSize,
+    color,
+    weight,
+    maxWidth: maxWidth,
+    maxLines: maxLines,
+    textAlign: textAlign,
+  );
+  final alignedOffset = _alignedExportTextOffset(
+    offset: offset,
+    maxWidth: maxWidth,
+    painter: painter,
+    textAlign: textAlign,
+  );
+  painter.paint(canvas, alignedOffset);
+  return painter.height;
+}
+
+double _drawTextInRect(
+  Canvas canvas,
+  String text,
+  Rect rect,
+  double fontSize,
+  Color color,
+  FontWeight weight, {
+  int maxLines = 2,
+  TextAlign textAlign = TextAlign.start,
+}) {
+  final painter = _layoutExportText(
+    text,
+    fontSize,
+    color,
+    weight,
+    maxWidth: rect.width,
+    maxLines: maxLines,
+    textAlign: textAlign,
+  );
+  final horizontalOffset = _alignedExportTextOffset(
+    offset: rect.topLeft,
+    maxWidth: rect.width,
+    painter: painter,
+    textAlign: textAlign,
+  );
+  final dy = rect.top + math.max(0, (rect.height - painter.height) / 2);
+  painter.paint(canvas, Offset(horizontalOffset.dx, dy));
+  return painter.height;
+}
+
+TextPainter _layoutExportText(
+  String text,
+  double fontSize,
+  Color color,
+  FontWeight weight, {
+  required double maxWidth,
+  required int maxLines,
+  required TextAlign textAlign,
+}) {
+  return TextPainter(
     text: TextSpan(
       text: text,
       style: TextStyle(fontSize: fontSize, color: color, fontWeight: weight),
     ),
     textDirection: ui.TextDirection.ltr,
+    textAlign: textAlign,
     maxLines: maxLines,
     ellipsis: '...',
   )..layout(maxWidth: maxWidth);
-  painter.paint(canvas, offset);
-  return painter.height;
+}
+
+Offset _alignedExportTextOffset({
+  required Offset offset,
+  required double maxWidth,
+  required TextPainter painter,
+  required TextAlign textAlign,
+}) {
+  var dx = offset.dx;
+  if (textAlign == TextAlign.center) {
+    dx += math.max(0, (maxWidth - painter.width) / 2);
+  } else if (textAlign == TextAlign.end || textAlign == TextAlign.right) {
+    dx += math.max(0, maxWidth - painter.width);
+  }
+  return Offset(dx, offset.dy);
 }
 
 class _ExportOptionCard extends StatelessWidget {

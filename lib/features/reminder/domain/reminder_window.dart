@@ -10,6 +10,7 @@ class ReminderCandidate {
     required this.sessionId,
     required this.courseId,
     required this.courseName,
+    required this.minutesBefore,
     required this.startAt,
     required this.remindAt,
     required this.title,
@@ -21,6 +22,7 @@ class ReminderCandidate {
   final int sessionId;
   final int courseId;
   final String courseName;
+  final int minutesBefore;
   final DateTime startAt;
   final DateTime remindAt;
   final String title;
@@ -33,11 +35,13 @@ List<ReminderCandidate> buildRollingReminderWindow({
   required DateTime firstWeekMonday,
   required DateTime now,
   int minutesBefore = 20,
+  Iterable<int>? reminderOffsets,
   int windowDays = defaultReminderWindowDays,
   Iterable<LessonSlot> lessonSlots = defaultBnuzLessonSlots,
   String Function(int minutesBefore)? titleForMinutes,
 }) {
   final windowEnd = now.add(Duration(days: windowDays));
+  final offsets = _normalizedOffsets(reminderOffsets ?? [minutesBefore]);
   final candidates = <ReminderCandidate>[];
 
   for (final session in sessions) {
@@ -46,33 +50,44 @@ List<ReminderCandidate> buildRollingReminderWindow({
       firstWeekMonday: firstWeekMonday,
       lessonSlots: lessonSlots,
     )) {
-      final remindAt = occurrence.start.subtract(
-        Duration(minutes: minutesBefore),
-      );
-      if (remindAt.isBefore(now) || remindAt.isAfter(windowEnd)) {
-        continue;
-      }
+      for (final offset in offsets) {
+        final remindAt = occurrence.start.subtract(Duration(minutes: offset));
+        if (remindAt.isBefore(now) || remindAt.isAfter(windowEnd)) {
+          continue;
+        }
 
-      candidates.add(
-        ReminderCandidate(
-          notificationId: _notificationIdFor(session, occurrence.start),
-          sessionId: session.sessionId,
-          courseId: session.courseId,
-          courseName: session.courseName,
-          startAt: occurrence.start,
-          remindAt: remindAt,
-          title:
-              titleForMinutes?.call(minutesBefore) ??
-              _fallbackTitle(minutesBefore),
-          body: _bodyFor(session, occurrence.start),
-          payload: 'class-session:${session.sessionId}:${occurrence.week}',
-        ),
-      );
+        candidates.add(
+          ReminderCandidate(
+            notificationId: _notificationIdFor(
+              session,
+              occurrence.start,
+              offset,
+            ),
+            sessionId: session.sessionId,
+            courseId: session.courseId,
+            courseName: session.courseName,
+            minutesBefore: offset,
+            startAt: occurrence.start,
+            remindAt: remindAt,
+            title: titleForMinutes?.call(offset) ?? _fallbackTitle(offset),
+            body: _bodyFor(session, occurrence.start),
+            payload:
+                'class-session:${session.sessionId}:${occurrence.week}:$offset',
+          ),
+        );
+      }
     }
   }
 
   candidates.sort((a, b) => a.remindAt.compareTo(b.remindAt));
   return candidates;
+}
+
+List<int> _normalizedOffsets(Iterable<int> offsets) {
+  final result =
+      offsets.map((offset) => offset.clamp(0, 1440).toInt()).toSet().toList()
+        ..sort();
+  return result.isEmpty ? const [20] : result;
 }
 
 String _fallbackTitle(int minutesBefore) {
@@ -91,9 +106,13 @@ String _bodyFor(ClassSessionInfo session, DateTime start) {
   return parts.join(' - ');
 }
 
-int _notificationIdFor(ClassSessionInfo session, DateTime start) {
+int _notificationIdFor(
+  ClassSessionInfo session,
+  DateTime start,
+  int minutesBefore,
+) {
   final input =
-      '${session.sessionId}|${session.courseId}|${start.toIso8601String()}';
+      '${session.sessionId}|${session.courseId}|${start.toIso8601String()}|$minutesBefore';
   final hex = sha1.convert(input.codeUnits).toString().substring(0, 8);
   return int.parse(hex, radix: 16) & 0x7fffffff;
 }

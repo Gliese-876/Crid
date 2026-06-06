@@ -208,7 +208,11 @@ class _HiddenCoursePanel extends ConsumerWidget {
               for (final course in hiddenCourses)
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.menu_book_outlined),
+                  leading: Icon(
+                    course.isExam
+                        ? Icons.assignment_outlined
+                        : Icons.menu_book_outlined,
+                  ),
                   title: Text(course.name),
                   subtitle: Text(
                     course.teacher.isEmpty
@@ -218,9 +222,14 @@ class _HiddenCoursePanel extends ConsumerWidget {
                   ),
                   trailing: TextButton.icon(
                     onPressed: () async {
-                      await ref
-                          .read(timetableControllerProvider.notifier)
-                          .restoreHiddenCourse(course.id);
+                      final controller = ref.read(
+                        timetableControllerProvider.notifier,
+                      );
+                      if (course.isExam) {
+                        await controller.restoreHiddenExam(course.id);
+                      } else {
+                        await controller.restoreHiddenCourse(course.id);
+                      }
                       if (context.mounted) {
                         _showSnackBar(context, context.l10n.courseRestored);
                       }

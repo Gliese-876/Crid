@@ -7,6 +7,7 @@ import 'package:crid/app/locale_controller.dart';
 import 'package:crid/app/motion.dart';
 import 'package:crid/app/theme_controller.dart';
 import 'package:crid/core/theme/course_colors.dart';
+import 'package:crid/core/time/period.dart';
 import 'package:crid/data/database/app_database.dart';
 import 'package:crid/data/database/timetable_time.dart' hide WeekParity;
 import 'package:crid/features/reminder/data/local_notification_reminder_scheduler.dart';
@@ -14,6 +15,7 @@ import 'package:crid/features/settings/data/android_background_service.dart';
 import 'package:crid/features/settings/data/china_holiday_service.dart';
 import 'package:crid/features/settings/data/holiday_settings_controller.dart';
 import 'package:crid/features/settings/presentation/export_page.dart';
+import 'package:crid/features/settings/presentation/third_party_licenses_page.dart';
 import 'package:crid/features/timetable/data/timetable_repository.dart';
 import 'package:crid/features/timetable/presentation/course_slot_model.dart';
 import 'package:crid/features/timetable/presentation/plan_management_page.dart';
@@ -23,6 +25,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 import 'package:open_file/open_file.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -40,7 +43,14 @@ void main() {
     ExportFileService? exportFileService,
     ReminderSchedulerService? reminderScheduler,
     AndroidBackgroundService? androidBackgroundService,
+    FutureOr<void> Function(AppDatabase database)? seedDatabase,
   }) async {
+    debugOpenSourceLicensePreloadEnabled = false;
+    debugResetOpenSourceLicenseCache();
+    addTearDown(() {
+      debugOpenSourceLicensePreloadEnabled = true;
+      debugResetOpenSourceLicenseCache();
+    });
     SharedPreferences.setMockInitialValues(preferences);
     if (locale != null) {
       tester.platformDispatcher.localesTestValue = [locale];
@@ -48,6 +58,9 @@ void main() {
     }
     final database = AppDatabase(NativeDatabase.memory());
     addTearDown(database.close);
+    if (seedDatabase != null) {
+      await seedDatabase(database);
+    }
 
     await tester.pumpWidget(
       ProviderScope(
@@ -143,10 +156,83 @@ void main() {
       isTrue,
     );
 
-    await tester.drag(find.byType(PageView).first, const Offset(-320, 0));
+    await tester.dragFrom(
+      tester.getTopLeft(find.byType(PageView).first) + const Offset(195, 120),
+      const Offset(-320, 0),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Week ${expectedInitialWeek + 1}'), findsWidgets);
+  });
+
+  testWidgets('timetable grid keeps advancing across consecutive swipes', (
+    tester,
+  ) async {
+    if (expectedInitialWeek > maxSemesterWeek - 3) {
+      return;
+    }
+
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await pumpApp(tester, locale: const Locale('en'));
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(CridApp)),
+    );
+    await container
+        .read(timetableControllerProvider.notifier)
+        .saveCourse(
+          CourseSlotDraft(
+            name: 'Third Swipe Target',
+            teacher: 'Professor Later',
+            location: 'Room 1330',
+            weekday: DateTime.monday,
+            timeRange: CourseTimeRange.fromPeriods(5, 5),
+            startWeek: expectedInitialWeek + 3,
+            endWeek: expectedInitialWeek + 3,
+            parity: WeekParity.all,
+            color: courseColorForIndex(3),
+          ),
+        );
+    await tester.pumpAndSettle();
+
+    for (var index = 0; index < 3; index++) {
+      await tester.dragFrom(
+        tester.getTopLeft(find.byType(PageView).first) + const Offset(195, 120),
+        const Offset(-320, 0),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    expect(find.text('Week ${expectedInitialWeek + 3}'), findsWidgets);
+    expect(
+      _timetableScrollState(tester, expectedInitialWeek + 3).position.pixels,
+      greaterThan(700),
+    );
+  });
+
+  testWidgets('timetable grid swipes right to previous adjacent week', (
+    tester,
+  ) async {
+    if (expectedInitialWeek <= 1) {
+      return;
+    }
+
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await pumpApp(tester, locale: const Locale('en'));
+
+    expect(find.text('Week $expectedInitialWeek'), findsWidgets);
+
+    await tester.dragFrom(
+      tester.getTopLeft(find.byType(PageView).first) + const Offset(195, 120),
+      const Offset(320, 0),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Week ${expectedInitialWeek - 1}'), findsWidgets);
   });
 
   testWidgets('desktop navigation rail can be collapsed and expanded', (
@@ -214,7 +300,10 @@ void main() {
     await pumpApp(tester, locale: const Locale('en'));
 
     expect(find.text('Timetable'), findsWidgets);
-    expect(find.text('May'), findsOneWidget);
+    expect(
+      find.text(DateFormat.MMMM('en').format(DateTime.now())),
+      findsOneWidget,
+    );
     expect(find.text('Week $expectedInitialWeek'), findsWidgets);
     await tester.scrollUntilVisible(
       find.text("Today's courses"),
@@ -222,6 +311,28 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text("Today's courses"), findsOneWidget);
+  });
+
+  testWidgets('today section keeps standard compact page inset', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await pumpApp(tester, locale: const Locale('en'));
+
+    expect(tester.getTopLeft(find.byType(Card).first).dx, lessThan(16));
+
+    await tester.scrollUntilVisible(
+      find.text("Today's courses"),
+      600,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    expect(
+      tester.getTopLeft(find.text("Today's courses")).dx,
+      closeTo(16, 0.1),
+    );
   });
 
   testWidgets('today date highlight is circular', (tester) async {
@@ -279,6 +390,196 @@ void main() {
     );
   });
 
+  testWidgets('timetable date header stays fixed above lesson time rows', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await pumpApp(tester, locale: const Locale('en'));
+
+    final header = find.byKey(
+      ValueKey('timetable-date-header-week-$expectedInitialWeek'),
+    );
+    final timeBody = find.byKey(const ValueKey('timetable-time-body'));
+
+    expect(header, findsOneWidget);
+    expect(timeBody, findsOneWidget);
+    expect(find.text('00:00'), findsOneWidget);
+    expect(find.text('12:00'), findsOneWidget);
+    expect(find.textContaining('08:00'), findsWidgets);
+
+    final headerTop = tester.getTopLeft(header).dy;
+    await tester.drag(timeBody, const Offset(0, -320));
+    await tester.pumpAndSettle();
+
+    expect(tester.getTopLeft(header).dy, closeTo(headerTop, 0.1));
+    expect(find.text('00:00'), findsOneWidget);
+  });
+
+  testWidgets('startup auto-scrolls to current week earliest course', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final today = DateTime.now();
+    final earlyWeekday = today.weekday == DateTime.monday
+        ? DateTime.tuesday
+        : DateTime.monday;
+
+    await pumpApp(
+      tester,
+      locale: const Locale('en'),
+      seedDatabase: (database) async {
+        final repository = TimetableRepository(database);
+        await repository.ensureSeedData();
+        await repository.saveCourse(
+          CourseSlotDraft(
+            name: 'Week Earliest Startup',
+            teacher: 'Professor Dawn',
+            location: 'Room 0800',
+            weekday: earlyWeekday,
+            timeRange: CourseTimeRange.fromPeriods(1, 1),
+            startWeek: expectedInitialWeek,
+            endWeek: expectedInitialWeek,
+            parity: WeekParity.all,
+            color: courseColorForIndex(0),
+          ),
+        );
+        await repository.saveCourse(
+          CourseSlotDraft(
+            name: 'Today Later Startup',
+            teacher: 'Professor Noon',
+            location: 'Room 1330',
+            weekday: today.weekday,
+            timeRange: CourseTimeRange.fromPeriods(5, 5),
+            startWeek: expectedInitialWeek,
+            endWeek: expectedInitialWeek,
+            parity: WeekParity.all,
+            color: courseColorForIndex(1),
+          ),
+        );
+      },
+    );
+
+    final scrollState = _timetableScrollState(tester, expectedInitialWeek);
+
+    expect(scrollState.position.pixels, greaterThan(450));
+    expect(scrollState.position.pixels, lessThan(650));
+  });
+
+  testWidgets('tapping any date header scrolls to week earliest course', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await pumpApp(tester, locale: const Locale('en'));
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(CridApp)),
+    );
+    await container
+        .read(timetableControllerProvider.notifier)
+        .saveCourse(
+          CourseSlotDraft(
+            name: 'Midday Header Target',
+            teacher: 'Professor Noon',
+            location: 'Room 1200',
+            weekday: DateTime.wednesday,
+            timeRange: CourseTimeRange.fromPeriods(5, 5),
+            startWeek: expectedInitialWeek,
+            endWeek: expectedInitialWeek,
+            parity: WeekParity.all,
+            color: courseColorForIndex(0),
+          ),
+        );
+    await container
+        .read(timetableControllerProvider.notifier)
+        .saveCourse(
+          CourseSlotDraft(
+            name: 'Week Earliest Header Target',
+            teacher: 'Professor Dawn',
+            location: 'Room 0800',
+            weekday: DateTime.monday,
+            timeRange: CourseTimeRange.fromPeriods(1, 1),
+            startWeek: expectedInitialWeek,
+            endWeek: expectedInitialWeek,
+            parity: WeekParity.all,
+            color: courseColorForIndex(1),
+          ),
+        );
+    await tester.pumpAndSettle();
+
+    final scrollState = _timetableScrollState(tester, expectedInitialWeek);
+    expect(scrollState.position.pixels, lessThan(100));
+
+    final weekMonday = DateTime(
+      2026,
+      2,
+      23,
+    ).add(Duration(days: (expectedInitialWeek - 1) * 7));
+    final clickedDate = weekMonday.add(const Duration(days: 2));
+    final header = find.byKey(
+      ValueKey('timetable-date-header-week-$expectedInitialWeek'),
+    );
+    await tester.tap(
+      find.descendant(of: header, matching: find.text('${clickedDate.day}')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(scrollState.position.pixels, greaterThan(450));
+    expect(scrollState.position.pixels, lessThan(650));
+  });
+
+  testWidgets(
+    'week swipe scrolls to next week earliest course after settling',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await pumpApp(tester, locale: const Locale('en'));
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(CridApp)),
+      );
+      await container
+          .read(timetableControllerProvider.notifier)
+          .saveCourse(
+            CourseSlotDraft(
+              name: 'Next Week Midday Target',
+              teacher: 'Professor Noon',
+              location: 'Room 1330',
+              weekday: DateTime.monday,
+              timeRange: CourseTimeRange.fromPeriods(5, 5),
+              startWeek: expectedInitialWeek + 1,
+              endWeek: expectedInitialWeek + 1,
+              parity: WeekParity.all,
+              color: courseColorForIndex(2),
+            ),
+          );
+      await tester.pumpAndSettle();
+
+      final scrollState = _timetableScrollState(tester, expectedInitialWeek);
+      expect(scrollState.position.pixels, lessThan(100));
+
+      await tester.dragFrom(
+        tester.getTopLeft(find.byType(PageView).first) + const Offset(195, 120),
+        const Offset(-320, 0),
+      );
+      await tester.pump();
+      expect(scrollState.position.pixels, lessThan(100));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Week ${expectedInitialWeek + 1}'), findsWidgets);
+      final settledScrollState = _timetableScrollState(
+        tester,
+        expectedInitialWeek + 1,
+      );
+      expect(settledScrollState.position.pixels, greaterThan(700));
+    },
+  );
+
   testWidgets('timetable marks holiday-hidden days with a rest column', (
     tester,
   ) async {
@@ -317,7 +618,29 @@ void main() {
     await pumpApp(
       tester,
       locale: const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
+      seedDatabase: (database) async {
+        final repository = TimetableRepository(database);
+        await repository.ensureSeedData();
+        await repository.saveCourse(
+          CourseSlotDraft(
+            name: '返回课表自动定位',
+            teacher: 'Professor Noon',
+            location: 'Room 1330',
+            weekday: DateTime.monday,
+            timeRange: CourseTimeRange.fromPeriods(5, 5),
+            startWeek: expectedInitialWeek,
+            endWeek: expectedInitialWeek,
+            parity: WeekParity.all,
+            color: courseColorForIndex(2),
+          ),
+        );
+      },
     );
+    final scrollState = _timetableScrollState(tester, expectedInitialWeek);
+    scrollState.position.jumpTo(0);
+    await tester.pump();
+    expect(scrollState.position.pixels, lessThan(100));
+
     await tester.tap(find.text('方案').last);
     await tester.pumpAndSettle();
 
@@ -331,6 +654,56 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('第 $expectedInitialWeek 周'), findsWidgets);
+    expect(
+      _timetableScrollState(tester, expectedInitialWeek).position.pixels,
+      greaterThan(700),
+    );
+  });
+
+  testWidgets('returning from plans tab auto-scrolls timetable', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await pumpApp(
+      tester,
+      locale: const Locale('en'),
+      seedDatabase: (database) async {
+        final repository = TimetableRepository(database);
+        await repository.ensureSeedData();
+        await repository.saveCourse(
+          CourseSlotDraft(
+            name: 'Plans Return Target',
+            teacher: 'Professor Noon',
+            location: 'Room 1330',
+            weekday: DateTime.monday,
+            timeRange: CourseTimeRange.fromPeriods(5, 5),
+            startWeek: expectedInitialWeek,
+            endWeek: expectedInitialWeek,
+            parity: WeekParity.all,
+            color: courseColorForIndex(3),
+          ),
+        );
+      },
+    );
+    final scrollState = _timetableScrollState(tester, expectedInitialWeek);
+    scrollState.position.jumpTo(0);
+    await tester.pump();
+    expect(scrollState.position.pixels, lessThan(100));
+
+    await tester.tap(find.text('Plans').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Timetable plans'), findsOneWidget);
+
+    await tester.tap(find.text('Timetable').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Week $expectedInitialWeek'), findsWidgets);
+    expect(
+      _timetableScrollState(tester, expectedInitialWeek).position.pixels,
+      greaterThan(700),
+    );
   });
 
   testWidgets('core destinations slide horizontally when switching', (
@@ -581,7 +954,10 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await pumpApp(tester, locale: const Locale('en'));
-    await tester.drag(find.byType(PageView).first, const Offset(-320, 0));
+    await tester.dragFrom(
+      tester.getTopLeft(find.byType(PageView).first) + const Offset(195, 120),
+      const Offset(-320, 0),
+    );
     await tester.pumpAndSettle();
 
     final todayFab = find.ancestor(
@@ -764,14 +1140,14 @@ void main() {
     await tester.drag(find.byType(Scrollable).first, const Offset(0, -1600));
     await tester.pumpAndSettle();
 
-    final licenses = find.text('第三方开源许可');
+    final licenses = find.text('开放源代码许可');
     final localData = find.text('本地数据');
     final appTitle = find.text('课格');
 
     expect(licenses, findsOneWidget);
     expect(localData, findsOneWidget);
     expect(appTitle, findsOneWidget);
-    expect(find.text('1.0.0-release'), findsOneWidget);
+    expect(find.text('1.1.0-release'), findsOneWidget);
     expect(find.text('无需登录；课表和提醒都在本机处理。'), findsNothing);
 
     expect(
@@ -781,6 +1157,93 @@ void main() {
     expect(
       tester.getTopLeft(localData).dy,
       lessThan(tester.getTopLeft(appTitle).dy),
+    );
+  });
+
+  testWidgets('open-source license page shows Crid license details', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await pumpApp(
+      tester,
+      locale: const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
+    );
+
+    await tester.tap(find.byTooltip('设置'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('开放源代码许可'),
+      600,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.text('开放源代码许可'));
+
+    for (
+      var i = 0;
+      i < 100 && find.byType(CustomScrollView).evaluate().isEmpty;
+      i++
+    ) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await tester.pump(const Duration(seconds: 1));
+    final licenseScrollable = find.descendant(
+      of: find.byType(CustomScrollView),
+      matching: find.byType(Scrollable),
+    );
+    final appLicenseTitle = find.descendant(
+      of: find.byType(ListTile),
+      matching: find.text('课格（Crid）'),
+    );
+    expect(licenseScrollable, findsOneWidget);
+    await tester.scrollUntilVisible(
+      appLicenseTitle,
+      600,
+      scrollable: licenseScrollable,
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('开放源代码许可'), findsWidgets);
+    expect(appLicenseTitle, findsOneWidget);
+    expect(find.textContaining('段许可文本'), findsNothing);
+
+    await tester.tap(
+      find.ancestor(of: appLicenseTitle, matching: find.byType(ListTile)),
+    );
+    for (
+      var i = 0;
+      i < 100 && find.textContaining('TERMS AND CONDITIONS').evaluate().isEmpty;
+      i++
+    ) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.textContaining('Apache License'), findsWidgets);
+    expect(find.textContaining('TERMS AND CONDITIONS'), findsWidgets);
+    expect(find.text('课格（Crid）'), findsWidgets);
+    expect(find.textContaining('段许可文本'), findsNothing);
+    final detailList = find.byWidgetPredicate(
+      (widget) =>
+          widget is ListView &&
+          widget.key.toString().contains('open-source-license-detail-Crid'),
+    );
+    final detailScrollable = find.descendant(
+      of: detailList,
+      matching: find.byType(Scrollable),
+    );
+    expect(detailList, findsOneWidget);
+    expect(detailScrollable, findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.textContaining('Copyright 2026 Crid contributors'),
+      1000,
+      scrollable: detailScrollable,
+    );
+
+    expect(
+      find.textContaining('Copyright 2026 Crid contributors'),
+      findsOneWidget,
     );
   });
 
@@ -820,22 +1283,16 @@ void main() {
     expect(find.text('Do not adjust holidays'), findsOneWidget);
 
     await tester.scrollUntilVisible(
-      find.text('Legal holidays'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Legal holidays'));
-    await tester.pumpAndSettle();
-
-    await tester.scrollUntilVisible(
       find.text('Do not adjust holidays'),
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('Do not adjust holidays'));
+    await tester.ensureVisible(adjustmentMenu);
+    await tester.pumpAndSettle();
+    await tester.tap(adjustmentMenu);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Follow adjusted class days'));
+    await tester.tap(find.text('Follow adjusted class days').last);
     await tester.pumpAndSettle();
 
     expect(find.text('Follow adjusted class days'), findsOneWidget);
@@ -883,7 +1340,7 @@ void main() {
     expect(labelBottom, lessThanOrEqualTo(fieldTop - 4));
   });
 
-  testWidgets('reminder lead time value aligns with the slider', (
+  testWidgets('reminder lead time exposes preset and custom controls', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(1200, 800));
@@ -898,10 +1355,14 @@ void main() {
       tester.widget<SwitchListTile>(find.byType(SwitchListTile).first).value,
       isFalse,
     );
-    final sliderCenterY = tester.getCenter(find.byType(Slider).first).dy;
-    final valueCenterY = tester.getCenter(find.text('20 min')).dy;
-
-    expect((sliderCenterY - valueCenterY).abs(), lessThanOrEqualTo(1));
+    expect(find.widgetWithText(FilterChip, '20 min'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilterChip>(find.widgetWithText(FilterChip, '20 min'))
+          .selected,
+      isTrue,
+    );
+    expect(find.widgetWithText(ActionChip, 'Custom time'), findsOneWidget);
   });
 
   testWidgets('resuming the app rebuilds the rolling reminder window', (
@@ -955,8 +1416,7 @@ void main() {
             teacher: 'Professor Rivera',
             location: 'Inclusive Lab 1208',
             weekday: DateTime.monday,
-            startPeriod: 1,
-            endPeriod: 1,
+            timeRange: CourseTimeRange.fromPeriods(1, 1),
             startWeek: expectedInitialWeek,
             endWeek: expectedInitialWeek,
             parity: WeekParity.all,
@@ -986,6 +1446,142 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('course details sheet stays above mobile bottom navigation', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await pumpApp(tester, locale: const Locale('en'));
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(CridApp)),
+    );
+    await container
+        .read(timetableControllerProvider.notifier)
+        .saveCourse(
+          CourseSlotDraft(
+            name: 'Navigation Clearance Studio',
+            teacher: 'Professor Hart',
+            location: 'Room 404',
+            weekday: DateTime.monday,
+            timeRange: CourseTimeRange.fromPeriods(1, 1),
+            startWeek: expectedInitialWeek,
+            endWeek: expectedInitialWeek,
+            parity: WeekParity.all,
+            color: courseColorForIndex(0),
+          ),
+        );
+    await tester.pumpAndSettle();
+
+    final courseBlockElement = find
+        .ancestor(
+          of: find.text('Navigation Clearance Studio').first,
+          matching: find.byType(Material),
+        )
+        .evaluate()
+        .singleWhere((element) {
+          final widget = element.widget;
+          return widget is Material &&
+              widget.borderRadius == BorderRadius.circular(8) &&
+              widget.clipBehavior == Clip.antiAlias;
+        });
+    final courseBlockBox = courseBlockElement.renderObject! as RenderBox;
+    final timetableLeft = tester.getTopLeft(find.byType(TimetableHomePage)).dx;
+    await tester.tapAt(
+      courseBlockBox.localToGlobal(courseBlockBox.size.center(Offset.zero)),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 170));
+
+    expect(
+      tester.getTopLeft(find.byType(TimetableHomePage)).dx,
+      closeTo(timetableLeft, 0.1),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Edit'), findsOneWidget);
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.text('Professor Hart'), findsWidgets);
+
+    final detailsSheet = find.byKey(const ValueKey('course-details-sheet'));
+    expect(detailsSheet, findsOneWidget);
+    final sheetMaterial = tester.widget<Material>(
+      find.descendant(
+        of: detailsSheet,
+        matching: find.byWidgetPredicate(
+          (widget) => widget is Material && widget.elevation == 6,
+        ),
+      ),
+    );
+    final theme = Theme.of(tester.element(find.byType(TimetableHomePage)));
+    expect(sheetMaterial.color, theme.navigationBarTheme.backgroundColor);
+    expect(sheetMaterial.shadowColor, isNot(Colors.transparent));
+    final sheetBottom = tester.getBottomLeft(detailsSheet).dy;
+    final navTop = tester.getTopLeft(find.byType(NavigationBar)).dy;
+    expect(sheetBottom, closeTo(navTop, 0.1));
+
+    await tester.tap(find.byTooltip('Close'));
+    await tester.pump(appMicroMotionDuration ~/ 2);
+    expect(detailsSheet, findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(detailsSheet, findsNothing);
+  });
+
+  testWidgets('course details sheet leaves mobile bottom navigation usable', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await pumpApp(tester, locale: const Locale('en'));
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(CridApp)),
+    );
+    await container
+        .read(timetableControllerProvider.notifier)
+        .saveCourse(
+          CourseSlotDraft(
+            name: 'Bottom Navigation Studio',
+            teacher: 'Professor Vale',
+            location: 'Room 512',
+            weekday: DateTime.monday,
+            timeRange: CourseTimeRange.fromPeriods(1, 1),
+            startWeek: expectedInitialWeek,
+            endWeek: expectedInitialWeek,
+            parity: WeekParity.all,
+            color: courseColorForIndex(0),
+          ),
+        );
+    await tester.pumpAndSettle();
+
+    final courseBlockElement = find
+        .ancestor(
+          of: find.text('Bottom Navigation Studio').first,
+          matching: find.byType(Material),
+        )
+        .evaluate()
+        .singleWhere((element) {
+          final widget = element.widget;
+          return widget is Material &&
+              widget.borderRadius == BorderRadius.circular(8) &&
+              widget.clipBehavior == Clip.antiAlias;
+        });
+    final courseBlockBox = courseBlockElement.renderObject! as RenderBox;
+    await tester.tapAt(
+      courseBlockBox.localToGlobal(courseBlockBox.size.center(Offset.zero)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('course-details-sheet')), findsOneWidget);
+
+    await tester.tap(find.text('Plans').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Timetable plans'), findsOneWidget);
+  });
+
   testWidgets('today list shows only courses scheduled for today', (
     tester,
   ) async {
@@ -1006,8 +1602,7 @@ void main() {
             teacher: 'Professor Chen',
             location: 'Studio 302',
             weekday: today.weekday,
-            startPeriod: 3,
-            endPeriod: 4,
+            timeRange: CourseTimeRange.fromPeriods(3, 4),
             startWeek: expectedInitialWeek,
             endWeek: expectedInitialWeek,
             parity: WeekParity.all,
@@ -1024,8 +1619,7 @@ void main() {
             weekday: today.weekday == DateTime.sunday
                 ? DateTime.monday
                 : today.weekday + 1,
-            startPeriod: 3,
-            endPeriod: 4,
+            timeRange: CourseTimeRange.fromPeriods(3, 4),
             startWeek: expectedInitialWeek,
             endWeek: expectedInitialWeek,
             parity: WeekParity.all,
@@ -1063,6 +1657,15 @@ void main() {
       findsOneWidget,
     );
   });
+}
+
+ScrollableState _timetableScrollState(WidgetTester tester, int _) {
+  final timeBody = find.byKey(const ValueKey('timetable-time-body'));
+  final scrollable = find.descendant(
+    of: timeBody,
+    matching: find.byType(Scrollable),
+  );
+  return tester.state<ScrollableState>(scrollable.first);
 }
 
 void _expectBackTitleGap(WidgetTester tester, String title) {
@@ -1126,11 +1729,17 @@ class _FakeReminderScheduler implements ReminderSchedulerService {
   }
 
   @override
+  Future<bool> requestDoNotDisturbBypassIfSupported() async => true;
+
+  @override
   Future<ReminderScheduleResult> scheduleRollingWindow({
     required Iterable<ClassSessionInfo> sessions,
     required DateTime firstWeekMonday,
     required DateTime now,
     int minutesBefore = 20,
+    Iterable<int>? reminderOffsets,
+    bool ignoreDoNotDisturb = false,
+    bool vibrateOnly = false,
     int windowDays = defaultReminderScheduleWindowDays,
     String Function(int minutesBefore)? titleForMinutes,
   }) async {
@@ -1151,11 +1760,17 @@ class _RecordingReminderScheduler implements ReminderSchedulerService {
   }
 
   @override
+  Future<bool> requestDoNotDisturbBypassIfSupported() async => true;
+
+  @override
   Future<ReminderScheduleResult> scheduleRollingWindow({
     required Iterable<ClassSessionInfo> sessions,
     required DateTime firstWeekMonday,
     required DateTime now,
     int minutesBefore = 20,
+    Iterable<int>? reminderOffsets,
+    bool ignoreDoNotDisturb = false,
+    bool vibrateOnly = false,
     int windowDays = defaultReminderScheduleWindowDays,
     String Function(int minutesBefore)? titleForMinutes,
   }) async {

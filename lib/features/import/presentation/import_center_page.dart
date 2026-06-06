@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_state.dart';
 import '../../../l10n/l10n.dart';
+import '../domain/parsed_exam_schedule.dart';
 import '../domain/parsed_timetable.dart';
 import 'import_preview_controller.dart';
 
@@ -79,6 +81,13 @@ class _ImportSourceCard extends ConsumerWidget {
                   label: Text(context.l10n.chooseFile),
                 ),
                 OutlinedButton.icon(
+                  onPressed: preview.isLoading
+                      ? null
+                      : () => _pasteExamText(context, controller),
+                  icon: const Icon(Icons.content_paste_outlined),
+                  label: Text(context.l10n.pasteExamSchedule),
+                ),
+                OutlinedButton.icon(
                   onPressed: () => context.push(
                     Uri(
                       path: '/import/conflicts',
@@ -96,6 +105,24 @@ class _ImportSourceCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _pasteExamText(
+    BuildContext context,
+    ImportPreviewController controller,
+  ) async {
+    final clipboardText = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
+    if (!context.mounted) {
+      return;
+    }
+    final text = await showDialog<String>(
+      context: context,
+      builder: (context) => _PasteExamDialog(initialText: clipboardText ?? ''),
+    );
+    if (text == null || text.trim().isEmpty) {
+      return;
+    }
+    await controller.pasteExamText(text);
   }
 
   Future<void> _pickFirstWeekMonday(
@@ -119,6 +146,59 @@ class _ImportSourceCard extends ConsumerWidget {
   }
 }
 
+class _PasteExamDialog extends StatefulWidget {
+  const _PasteExamDialog({required this.initialText});
+
+  final String initialText;
+
+  @override
+  State<_PasteExamDialog> createState() => _PasteExamDialogState();
+}
+
+class _PasteExamDialogState extends State<_PasteExamDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialText);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(context.l10n.pasteExamSchedule),
+      content: SizedBox(
+        width: 560,
+        child: TextField(
+          controller: _controller,
+          minLines: 8,
+          maxLines: 14,
+          decoration: InputDecoration(
+            hintText: context.l10n.pasteExamScheduleHint,
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text),
+          child: Text(context.l10n.importExamSchedule),
+        ),
+      ],
+    );
+  }
+}
+
 class _PreviewCard extends ConsumerWidget {
   const _PreviewCard({required this.preview});
 
@@ -128,8 +208,11 @@ class _PreviewCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = preview.asData?.value ?? const ImportPreviewState();
     final parsed = state.parsed;
+    final parsedExams = state.parsedExams;
     final courses = parsed?.courses ?? const [];
+    final exams = parsedExams?.exams ?? const [];
     final warnings = parsed?.warnings ?? const [];
+    final examWarnings = parsedExams?.warnings ?? const [];
     final merge = state.mergeResult;
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -144,7 +227,9 @@ class _PreviewCard extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     parsed == null
-                        ? context.l10n.stagingPreview
+                        ? parsedExams == null
+                              ? context.l10n.stagingPreview
+                              : parsedExams.sourceName
                         : parsed.sourceName,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
@@ -174,19 +259,29 @@ class _PreviewCard extends ConsumerWidget {
             else if (preview.hasError)
               _ErrorText(error: preview.error!)
             else
-              _PreviewStats(
-                parsedCount: courses.length,
-                addedCount: merge?.added.length ?? 0,
-                changedCount: merge?.diffs.length ?? 0,
-                conflictCount: merge?.conflicts.length ?? 0,
-              ),
+              parsedExams == null
+                  ? _PreviewStats(
+                      parsedCount: courses.length,
+                      addedCount: merge?.added.length ?? 0,
+                      changedCount: merge?.diffs.length ?? 0,
+                      conflictCount: merge?.conflicts.length ?? 0,
+                    )
+                  : _ExamPreviewStats(
+                      parsedCount: exams.length,
+                      addedCount: state.examCommitSummary?.added,
+                      skippedCount: state.examCommitSummary?.skipped,
+                    ),
             const SizedBox(height: 12),
-            if (courses.isEmpty)
+            if (parsedExams != null && exams.isNotEmpty)
+              _ExamPreviewTable(exams: exams.take(24).toList())
+            else if (courses.isEmpty)
               const _EmptyPreview()
             else
               _CoursePreviewTable(courses: courses.take(24).toList()),
             const SizedBox(height: 12),
             for (final warning in warnings.take(5))
+              _WarningLine(text: _parseWarningText(context, warning)),
+            for (final warning in examWarnings.take(5))
               _WarningLine(text: _parseWarningText(context, warning)),
             if (state.commitSummary != null)
               _WarningLine(
@@ -196,7 +291,14 @@ class _PreviewCard extends ConsumerWidget {
                   state.commitSummary!.conflicts,
                 ),
               ),
-            if (parsed != null)
+            if (state.examCommitSummary != null)
+              _WarningLine(
+                text: context.l10n.examImportCommittedSummary(
+                  state.examCommitSummary!.added,
+                  state.examCommitSummary!.skipped,
+                ),
+              ),
+            if (parsed != null || parsedExams != null)
               Align(
                 alignment: Alignment.centerRight,
                 child: FilledButton.icon(
@@ -206,12 +308,52 @@ class _PreviewCard extends ConsumerWidget {
                             .read(importPreviewControllerProvider.notifier)
                             .markCommitted(),
                   icon: const Icon(Icons.merge_type_outlined),
-                  label: Text(context.l10n.applyStagingMerge),
+                  label: Text(
+                    parsedExams == null
+                        ? context.l10n.applyStagingMerge
+                        : context.l10n.importExamSchedule,
+                  ),
                 ),
               ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ExamPreviewStats extends StatelessWidget {
+  const _ExamPreviewStats({
+    required this.parsedCount,
+    required this.addedCount,
+    required this.skippedCount,
+  });
+
+  final int parsedCount;
+  final int? addedCount;
+  final int? skippedCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _StatChip(
+          label: context.l10n.examParsedCount(parsedCount),
+          icon: Icons.event_note_outlined,
+        ),
+        if (addedCount != null)
+          _StatChip(
+            label: context.l10n.newCount(addedCount!),
+            icon: Icons.add_circle_outline,
+          ),
+        if (skippedCount != null)
+          _StatChip(
+            label: context.l10n.skippedCount(skippedCount!),
+            icon: Icons.remove_circle_outline,
+          ),
+      ],
     );
   }
 }
@@ -282,7 +424,7 @@ class _CoursePreviewTable extends StatelessWidget {
                 DataCell(
                   Text(
                     '${context.l10n.dayNumber(course.weekday)} '
-                    '${course.period.normalizedKey}',
+                    '${_courseTimeLabel(course)}',
                   ),
                 ),
                 DataCell(Text(course.location.isEmpty ? '-' : course.location)),
@@ -292,6 +434,62 @@ class _CoursePreviewTable extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+String _courseTimeLabel(ParsedCourse course) {
+  return '${_minuteLabel(course.timeRange.startMinuteOfDay)}-'
+      '${_minuteLabel(course.timeRange.endMinuteOfDay)}';
+}
+
+String _minuteLabel(int minuteOfDay) {
+  final hour = minuteOfDay ~/ 60;
+  final minute = minuteOfDay % 60;
+  return '${hour.toString().padLeft(2, '0')}:'
+      '${minute.toString().padLeft(2, '0')}';
+}
+
+class _ExamPreviewTable extends StatelessWidget {
+  const _ExamPreviewTable({required this.exams});
+
+  final List<ParsedExam> exams;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        columns: [
+          DataColumn(label: Text(context.l10n.examRound)),
+          DataColumn(label: Text(context.l10n.course)),
+          DataColumn(label: Text(context.l10n.examTime)),
+          DataColumn(label: Text(context.l10n.location)),
+          DataColumn(label: Text(context.l10n.seatNumber)),
+        ],
+        rows: [
+          for (final exam in exams)
+            DataRow(
+              cells: [
+                DataCell(Text(exam.examRound)),
+                DataCell(Text(exam.displayName)),
+                DataCell(
+                  Text(
+                    '${exam.startAt.toIso8601String().split('T').first} '
+                    '${_timeOf(exam.startAt)}-${_timeOf(exam.endAt)}',
+                  ),
+                ),
+                DataCell(Text(exam.location.isEmpty ? '-' : exam.location)),
+                DataCell(Text(exam.seatNumber.isEmpty ? '-' : exam.seatNumber)),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _timeOf(DateTime value) {
+    return '${value.hour.toString().padLeft(2, '0')}:'
+        '${value.minute.toString().padLeft(2, '0')}';
   }
 }
 

@@ -85,7 +85,10 @@ class IcsParserAdapter implements TimetableParserAdapter {
       description,
     );
 
-    final period = _periodFromEvent(description, start, end);
+    final timeRange = CourseTimeRange.fromClockTimes(
+      startMinuteOfDay: start.hour * 60 + start.minute,
+      endMinuteOfDay: end.hour * 60 + end.minute,
+    );
     final weeks = _weeksFromEvent(
       event,
       start,
@@ -98,23 +101,12 @@ class IcsParserAdapter implements TimetableParserAdapter {
       teacher: locationAndTeacher.teacher,
       location: locationAndTeacher.location,
       weekday: start.weekday,
-      period: period,
+      period: timeRange.period,
+      timeRange: timeRange,
       weeks: weeks,
       sourceId: event['uid'] as String?,
       rawText: event.toString(),
     );
-  }
-
-  PeriodRange _periodFromEvent(
-    String description,
-    DateTime start,
-    DateTime end,
-  ) {
-    try {
-      return PeriodRange.parse(description);
-    } on FormatException {
-      return periodRangeFromTime(start, end);
-    }
   }
 
   WeekPattern _weeksFromEvent(

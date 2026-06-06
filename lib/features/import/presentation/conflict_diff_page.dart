@@ -340,11 +340,23 @@ String _courseSummary(BuildContext context, ParsedCourse course) {
       : course.location;
   return context.l10n.courseSummary(
     course.weekday,
-    course.period.normalizedKey,
+    _courseTimeLabel(course),
     weeks,
     teacher,
     location,
   );
+}
+
+String _courseTimeLabel(ParsedCourse course) {
+  return '${_minuteLabel(course.timeRange.startMinuteOfDay)}-'
+      '${_minuteLabel(course.timeRange.endMinuteOfDay)}';
+}
+
+String _minuteLabel(int minuteOfDay) {
+  final hour = minuteOfDay ~/ 60;
+  final minute = minuteOfDay % 60;
+  return '${hour.toString().padLeft(2, '0')}:'
+      '${minute.toString().padLeft(2, '0')}';
 }
 
 String _actionLabel(

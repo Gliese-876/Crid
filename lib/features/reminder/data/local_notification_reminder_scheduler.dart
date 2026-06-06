@@ -37,11 +37,16 @@ class ReminderPermissionStatus {
 abstract interface class ReminderSchedulerService {
   Future<ReminderPermissionStatus> requestPermissionsForScheduling();
 
+  Future<bool> requestDoNotDisturbBypassIfSupported();
+
   Future<ReminderScheduleResult> scheduleRollingWindow({
     required Iterable<ClassSessionInfo> sessions,
     required DateTime firstWeekMonday,
     required DateTime now,
     int minutesBefore,
+    Iterable<int>? reminderOffsets,
+    bool ignoreDoNotDisturb,
+    bool vibrateOnly,
     int windowDays = defaultReminderScheduleWindowDays,
     String Function(int minutesBefore)? titleForMinutes,
   });
@@ -77,11 +82,34 @@ class FlutterLocalReminderScheduler implements ReminderSchedulerService {
   }
 
   @override
+  Future<bool> requestDoNotDisturbBypassIfSupported() async {
+    try {
+      await _ensureInitialized();
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      if (android == null) {
+        return true;
+      }
+      if (await android.hasNotificationPolicyAccess() == true) {
+        return true;
+      }
+      return await android.requestNotificationPolicyAccess() ?? false;
+    } on Object {
+      return false;
+    }
+  }
+
+  @override
   Future<ReminderScheduleResult> scheduleRollingWindow({
     required Iterable<ClassSessionInfo> sessions,
     required DateTime firstWeekMonday,
     required DateTime now,
     int minutesBefore = 20,
+    Iterable<int>? reminderOffsets,
+    bool ignoreDoNotDisturb = false,
+    bool vibrateOnly = false,
     int windowDays = defaultReminderScheduleWindowDays,
     String Function(int minutesBefore)? titleForMinutes,
   }) async {
@@ -90,6 +118,7 @@ class FlutterLocalReminderScheduler implements ReminderSchedulerService {
       firstWeekMonday: firstWeekMonday,
       now: now,
       minutesBefore: minutesBefore,
+      reminderOffsets: reminderOffsets,
       windowDays: windowDays,
       titleForMinutes: titleForMinutes,
     );
@@ -111,7 +140,12 @@ class FlutterLocalReminderScheduler implements ReminderSchedulerService {
           ? AndroidScheduleMode.inexactAllowWhileIdle
           : await _androidScheduleMode(requestPermission: false);
       try {
-        await _scheduleCandidates(candidates, scheduleMode);
+        await _scheduleCandidates(
+          candidates,
+          scheduleMode,
+          ignoreDoNotDisturb: ignoreDoNotDisturb,
+          vibrateOnly: vibrateOnly,
+        );
       } on PlatformException catch (error) {
         if (scheduleMode != AndroidScheduleMode.exactAllowWhileIdle ||
             !_canRetryWithInexactAlarm(error)) {
@@ -119,7 +153,12 @@ class FlutterLocalReminderScheduler implements ReminderSchedulerService {
         }
         await _cancelPendingIfSupported();
         scheduleMode = AndroidScheduleMode.inexactAllowWhileIdle;
-        await _scheduleCandidates(candidates, scheduleMode);
+        await _scheduleCandidates(
+          candidates,
+          scheduleMode,
+          ignoreDoNotDisturb: ignoreDoNotDisturb,
+          vibrateOnly: vibrateOnly,
+        );
       }
       return ReminderScheduleResult(
         scheduledCount: candidates.length,
@@ -139,8 +178,10 @@ class FlutterLocalReminderScheduler implements ReminderSchedulerService {
 
   Future<void> _scheduleCandidates(
     Iterable<ReminderCandidate> candidates,
-    AndroidScheduleMode scheduleMode,
-  ) async {
+    AndroidScheduleMode scheduleMode, {
+    required bool ignoreDoNotDisturb,
+    required bool vibrateOnly,
+  }) async {
     for (final candidate in candidates) {
       await _plugin.zonedSchedule(
         id: candidate.notificationId,
@@ -148,7 +189,12 @@ class FlutterLocalReminderScheduler implements ReminderSchedulerService {
         body: candidate.body,
         scheduledDate: _shanghaiDateTime(candidate.remindAt),
         notificationDetails:
-            _notificationDetails ?? reminderNotificationDetailsFor(candidate),
+            _notificationDetails ??
+            reminderNotificationDetailsFor(
+              candidate,
+              ignoreDoNotDisturb: ignoreDoNotDisturb,
+              vibrateOnly: vibrateOnly,
+            ),
         androidScheduleMode: scheduleMode,
         payload: candidate.payload,
       );
@@ -265,17 +311,29 @@ class FlutterLocalReminderScheduler implements ReminderSchedulerService {
 }
 
 NotificationDetails reminderNotificationDetailsFor(
-  ReminderCandidate candidate,
-) {
+  ReminderCandidate candidate, {
+  bool ignoreDoNotDisturb = false,
+  bool vibrateOnly = false,
+}) {
   _ensureTimezone();
   final timeoutAfter = candidate.startAt
       .difference(candidate.remindAt)
       .inMilliseconds;
+  final channelSuffix = [
+    if (ignoreDoNotDisturb) 'dnd',
+    if (vibrateOnly) 'vibrate',
+  ].join('_');
+  final channelId = channelSuffix.isEmpty
+      ? 'class_reminders'
+      : 'class_reminders_$channelSuffix';
   return NotificationDetails(
     android: AndroidNotificationDetails(
-      'class_reminders',
-      'Class reminders',
+      channelId,
+      vibrateOnly ? 'Class reminders without sound' : 'Class reminders',
       channelDescription: 'Upcoming class reminders',
+      channelBypassDnd: ignoreDoNotDisturb,
+      playSound: !vibrateOnly,
+      enableVibration: true,
       importance: Importance.high,
       priority: Priority.high,
       autoCancel: false,
@@ -283,8 +341,8 @@ NotificationDetails reminderNotificationDetailsFor(
       onlyAlertOnce: true,
       showWhen: true,
       when: _shanghaiDateTime(candidate.startAt).millisecondsSinceEpoch,
-      usesChronometer: true,
-      chronometerCountDown: true,
+      usesChronometer: false,
+      chronometerCountDown: false,
       timeoutAfter: timeoutAfter > 0 ? timeoutAfter : null,
       category: AndroidNotificationCategory.reminder,
     ),

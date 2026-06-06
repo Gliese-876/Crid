@@ -97,7 +97,10 @@ void main() {
       adjustedRestDates: {'2026-05-03'},
       makeUpWorkdayDates: {'2026-05-09'},
     );
-    const disabled = HolidaySettings.defaults;
+    const disabled = HolidaySettings(
+      hideLegalHolidays: false,
+      adjustmentMode: HolidayAdjustmentMode.noAdjustment,
+    );
     const noAdjustment = HolidaySettings(
       hideLegalHolidays: true,
       adjustmentMode: HolidayAdjustmentMode.noAdjustment,
@@ -118,6 +121,54 @@ void main() {
     expect(schedule.shouldHide(DateTime(2026, 5, 9), makeUpWorkdays), isFalse);
     expect(schedule.shouldHide(DateTime(2026, 5, 9), noMakeUpWorkdays), isTrue);
   });
+
+  test(
+    'holiday course display modes differ for courses and exams by default',
+    () {
+      final schedule = ChinaHolidaySchedule(
+        year: 2026,
+        legalHolidayDates: {'2026-05-01'},
+        adjustedRestDates: const {},
+        makeUpWorkdayDates: const {},
+      );
+      final dates = [DateTime(2026, 5, 1)];
+
+      expect(
+        holidayCourseDisplayModeForWeekday(
+          weekday: 1,
+          isExam: false,
+          dates: dates,
+          settings: HolidaySettings.defaults,
+          schedule: schedule,
+        ),
+        HolidayCourseDisplayMode.muted,
+      );
+      expect(
+        holidayCourseDisplayModeForWeekday(
+          weekday: 1,
+          isExam: true,
+          dates: dates,
+          settings: HolidaySettings.defaults,
+          schedule: schedule,
+        ),
+        HolidayCourseDisplayMode.normal,
+      );
+      expect(
+        holidayCourseDisplayModeForWeekday(
+          weekday: 1,
+          isExam: true,
+          dates: dates,
+          settings: const HolidaySettings(
+            hideLegalHolidays: true,
+            adjustmentMode: HolidayAdjustmentMode.noAdjustment,
+            examDisplayMode: HolidayCourseDisplayMode.hidden,
+          ),
+          schedule: schedule,
+        ),
+        HolidayCourseDisplayMode.hidden,
+      );
+    },
+  );
 
   test('holiday rest day flags follow adjustment mode', () {
     final schedule = ChinaHolidaySchedule(

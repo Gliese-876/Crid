@@ -114,7 +114,7 @@ class TimetableMergeEngine {
   bool _sameCourseSlot(ParsedCourse existing, ParsedCourse incoming) {
     return existing.identityKey == incoming.identityKey &&
         existing.weekday == incoming.weekday &&
-        existing.period == incoming.period;
+        existing.timeRangeKey == incoming.timeRangeKey;
   }
 
   List<MergeDiffField> _changedFields(
@@ -133,7 +133,7 @@ class TimetableMergeEngine {
     if (existing.weeks != incoming.weeks) {
       fields.add(MergeDiffField.weeks);
     }
-    if (existing.period != incoming.period ||
+    if (existing.timeRangeKey != incoming.timeRangeKey ||
         existing.weekday != incoming.weekday) {
       fields.add(MergeDiffField.periods);
     }

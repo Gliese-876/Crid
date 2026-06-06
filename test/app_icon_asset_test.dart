@@ -89,6 +89,8 @@ void main() {
 
     expect(manifest, contains('android.permission.POST_NOTIFICATIONS'));
     expect(manifest, contains('android.permission.SCHEDULE_EXACT_ALARM'));
+    expect(manifest, contains('android:maxSdkVersion="32"'));
+    expect(manifest, contains('android.permission.USE_EXACT_ALARM'));
     expect(
       manifest,
       contains(

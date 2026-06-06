@@ -1,6 +1,7 @@
 import 'package:crid/app/motion.dart';
 import 'package:crid/app/theme.dart';
 import 'package:crid/core/theme/course_colors.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

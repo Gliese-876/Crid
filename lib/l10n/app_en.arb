@@ -137,8 +137,8 @@
   "location": "Location",
   "notes": "Notes",
   "weekday": "Weekday",
-  "startPeriod": "Start period",
-  "endPeriod": "End period",
+  "startPeriod": "Start time",
+  "endPeriod": "End time",
   "startWeek": "Start week",
   "endWeek": "End week",
   "allWeeks": "All weeks",
@@ -146,7 +146,8 @@
   "evenWeeks": "Even weeks",
   "requiredField": "Required",
   "weekNumberValidation": "Enter a value from 1 to 30.",
-  "courseSaved": "Course saved",
+  "timeValidation": "Use HH:mm and make the end time later than the start time.",
+  "courseSaved": "Saved {course}: weekday {weekday}, {start}-{end}.",
   "@courseSaved": {
     "placeholders": {
       "course": {
@@ -156,10 +157,10 @@
         "type": "int"
       },
       "start": {
-        "type": "int"
+        "type": "String"
       },
       "end": {
-        "type": "int"
+        "type": "String"
       }
     }
   },
@@ -169,6 +170,9 @@
   "importCenter": "Import center",
   "importCenterSubtitle": "Import timetable files from the academic system or calendar files.",
   "chooseFile": "Choose file",
+  "pasteExamSchedule": "Paste exam schedule",
+  "pasteExamScheduleHint": "Paste the exam schedule text copied from the academic system.",
+  "importExamSchedule": "Import exam schedule",
   "loadSample": "Load sample",
   "openDiff": "Review imports",
   "stagingPreview": "Import preview",
@@ -185,6 +189,22 @@
   },
   "newCount": "{count} new",
   "@newCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "skippedCount": "{count} skipped",
+  "@skippedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "examParsedCount": "{count} exams",
+  "@examParsedCount": {
     "placeholders": {
       "count": {
         "type": "int"
@@ -231,6 +251,17 @@
       }
     }
   },
+  "examImportCommittedSummary": "Imported {added} exam records and skipped {skipped} duplicates.",
+  "@examImportCommittedSummary": {
+    "placeholders": {
+      "added": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
   "importWarningUnsupportedFileType": "This file type is not supported yet. Choose a timetable spreadsheet or calendar file.",
   "importWarningWorkbookReadFailed": "Could not read this .xls file. Check that the file is not damaged.",
   "importWarningNoCompleteXlsRows": "The file looks like a timetable, but no complete courses were found.",
@@ -258,6 +289,9 @@
   "course": "Course",
   "time": "Time",
   "weeks": "Weeks",
+  "examRound": "Exam round",
+  "examTime": "Exam time",
+  "seatNumber": "Seat",
   "recentBatches": "Recent batches",
   "failedToLoadHistory": "Failed to load import history: {error}",
   "@failedToLoadHistory": {
@@ -434,9 +468,30 @@
   "denseTimetableSubtitle": "Reserved for a future compact view.",
   "localData": "Local data",
   "localDataSubtitle": "Timetables, imports, and reminders are stored on this device.",
+  "backupLocalData": "Back up locally",
+  "restoreLocalData": "Restore from backup",
+  "backupCreated": "Backup saved to {path}",
+  "@backupCreated": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "backupRestored": "Data and settings restored.",
+  "localDataActionFailed": "Local data action failed: {error}",
+  "@localDataActionFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
   "offlineAppSubtitle": "Offline-first timetable app for campus schedules.",
-  "thirdPartyLicenses": "Third-party licenses",
-  "thirdPartyLicensesSubtitle": "View open-source licenses for Flutter and app dependencies.",
+  "thirdPartyLicenses": "Open-source licenses",
+  "thirdPartyLicensesSubtitle": "View open-source licenses for Crid, Flutter, and app dependencies.",
+  "appLicenseDisplayName": "Crid",
+  "appLicenseSummary": "Crid is licensed under Apache License 2.0. Keep LICENSE and NOTICE attribution when redistributing.",
   "reminders": "Reminders",
   "reminderNotificationTitle": "Class starts in {minutes} min",
   "@reminderNotificationTitle": {
@@ -491,6 +546,13 @@
       }
     }
   },
+  "customReminderTime": "Custom time",
+  "minutesBeforeClass": "Before class",
+  "minutesUnit": "min",
+  "ignoreDoNotDisturb": "Bypass Do Not Disturb",
+  "ignoreDoNotDisturbSubtitle": "Android opens a system access page; after approval, the reminder channel can bypass DND.",
+  "vibrateReminder": "Mute reminder sound",
+  "vibrateReminderSubtitle": "Class reminders still vibrate, but no sound is played.",
   "goToToday": "Today",
   "delete": "Delete",
   "save": "Save",

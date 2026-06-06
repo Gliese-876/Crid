@@ -205,10 +205,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get weekday => 'Weekday';
 
   @override
-  String get startPeriod => 'Start period';
+  String get startPeriod => 'Start time';
 
   @override
-  String get endPeriod => 'End period';
+  String get endPeriod => 'End time';
 
   @override
   String get startWeek => 'Start week';
@@ -232,8 +232,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get weekNumberValidation => 'Enter a value from 1 to 30.';
 
   @override
-  String courseSaved(String course, int weekday, int start, int end) {
-    return 'Course saved';
+  String get timeValidation =>
+      'Use HH:mm and make the end time later than the start time.';
+
+  @override
+  String courseSaved(String course, int weekday, String start, String end) {
+    return 'Saved $course: weekday $weekday, $start-$end.';
   }
 
   @override
@@ -254,6 +258,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chooseFile => 'Choose file';
+
+  @override
+  String get pasteExamSchedule => 'Paste exam schedule';
+
+  @override
+  String get pasteExamScheduleHint =>
+      'Paste the exam schedule text copied from the academic system.';
+
+  @override
+  String get importExamSchedule => 'Import exam schedule';
 
   @override
   String get loadSample => 'Load sample';
@@ -284,6 +298,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String skippedCount(int count) {
+    return '$count skipped';
+  }
+
+  @override
+  String examParsedCount(int count) {
+    return '$count exams';
+  }
+
+  @override
   String changeCount(int count) {
     return '$count changed';
   }
@@ -308,6 +332,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String committedSummary(int added, int diffs, int conflicts) {
     return 'Added $added new sessions. $diffs updates and $conflicts overlaps remain for review.';
+  }
+
+  @override
+  String examImportCommittedSummary(int added, int skipped) {
+    return 'Imported $added exam records and skipped $skipped duplicates.';
   }
 
   @override
@@ -387,6 +416,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get weeks => 'Weeks';
+
+  @override
+  String get examRound => 'Exam round';
+
+  @override
+  String get examTime => 'Exam time';
+
+  @override
+  String get seatNumber => 'Seat';
 
   @override
   String get recentBatches => 'Recent batches';
@@ -608,15 +646,41 @@ class AppLocalizationsEn extends AppLocalizations {
       'Timetables, imports, and reminders are stored on this device.';
 
   @override
+  String get backupLocalData => 'Back up locally';
+
+  @override
+  String get restoreLocalData => 'Restore from backup';
+
+  @override
+  String backupCreated(String path) {
+    return 'Backup saved to $path';
+  }
+
+  @override
+  String get backupRestored => 'Data and settings restored.';
+
+  @override
+  String localDataActionFailed(Object error) {
+    return 'Local data action failed: $error';
+  }
+
+  @override
   String get offlineAppSubtitle =>
       'Offline-first timetable app for campus schedules.';
 
   @override
-  String get thirdPartyLicenses => 'Third-party licenses';
+  String get thirdPartyLicenses => 'Open-source licenses';
 
   @override
   String get thirdPartyLicensesSubtitle =>
-      'View open-source licenses for Flutter and app dependencies.';
+      'View open-source licenses for Crid, Flutter, and app dependencies.';
+
+  @override
+  String get appLicenseDisplayName => 'Crid';
+
+  @override
+  String get appLicenseSummary =>
+      'Crid is licensed under Apache License 2.0. Keep LICENSE and NOTICE attribution when redistributing.';
 
   @override
   String get reminders => 'Reminders';
@@ -694,6 +758,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String minutesShort(int minutes) {
     return '$minutes min';
   }
+
+  @override
+  String get customReminderTime => 'Custom time';
+
+  @override
+  String get minutesBeforeClass => 'Before class';
+
+  @override
+  String get minutesUnit => 'min';
+
+  @override
+  String get ignoreDoNotDisturb => 'Bypass Do Not Disturb';
+
+  @override
+  String get ignoreDoNotDisturbSubtitle =>
+      'Android opens a system access page; after approval, the reminder channel can bypass DND.';
+
+  @override
+  String get vibrateReminder => 'Mute reminder sound';
+
+  @override
+  String get vibrateReminderSubtitle =>
+      'Class reminders still vibrate, but no sound is played.';
 
   @override
   String get goToToday => 'Today';

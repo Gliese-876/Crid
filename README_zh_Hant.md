@@ -22,37 +22,38 @@
 - 上課提醒
 - 調休自動調整
 - 從教務系統匯入 `.xls` 格式的課表
+- 從教務系統匯入 `.mht`、`.mhtml` 和 `.pdf` 格式的考試安排
+- 透過直接貼上文字從教務系統匯入考試安排
 - 將課表匯出為 `.ics` 和 `.png` 格式
+- 本機備份和還原資料與設定
 - 多語言支援
 - 更多功能仍在開發中
 
 ## 如何安裝
 
-正式版安裝包發布在 [GitHub Releases](https://github.com/Gliese-876/Crid/releases)。目前第一個正式版是 `v1.0.0-release`。
+正式版安裝包發布在 [GitHub Releases](https://github.com/Gliese-876/Crid/releases)。目前最新正式版是 `v1.1.0-release`。
 
 ### Android
 
-下載 `Crid-1.0.0-release-android.apk` 後直接安裝即可。如果系統提示不允許安裝未知來源應用，請在 Android 設定中為瀏覽器或檔案管理器開啟「安裝未知應用」權限。
+下載 `Crid-1.1.0-release-android.apk` 後直接安裝即可。如果系統提示不允許安裝未知來源應用，請在 Android 設定中為瀏覽器或檔案管理器開啟「安裝未知應用」權限。
 
 也可以按裝置架構下載體積更小的分包：
 
-- `Crid-1.0.0-release-android-arm64.apk`：大多數近年的 Android 手機
-- `Crid-1.0.0-release-android-armeabi-v7a.apk`：較舊的 32 位 Android 裝置
-- `Crid-1.0.0-release-android-x86_64.apk`：x86_64 模擬器或少數 x86_64 裝置
-
-`Crid-1.0.0-release-android.aab` 主要用於應用商店分發，普通使用者不需要下載它。
+- `Crid-1.1.0-release-android-arm64.apk`：大多數近年的 Android 手機
+- `Crid-1.1.0-release-android-armeabi-v7a.apk`：較舊的 32 位 Android 裝置
+- `Crid-1.1.0-release-android-x86_64.apk`：x86_64 模擬器或少數 x86_64 裝置
 
 ### Windows
 
 下載這兩個檔案：
 
-- `Crid-1.0.0-release-windows.msix`
-- `Crid-1.0.0-release-windows.cer`
+- `Crid-1.1.0-release-windows.msix`
+- `Crid-1.1.0-release-windows.cer`
 
 由於目前 Windows 安裝包使用自簽名憑證，安裝前需要先信任隨包提供的憑證。建議使用系統管理員 PowerShell 執行：
 
 ```powershell
-$certPath = "C:\path\to\Crid-1.0.0-release-windows.cer"
+$certPath = "C:\path\to\Crid-1.1.0-release-windows.cer"
 
 Import-Certificate -FilePath $certPath -CertStoreLocation Cert:\LocalMachine\TrustedPeople
 Import-Certificate -FilePath $certPath -CertStoreLocation Cert:\LocalMachine\Root
@@ -61,7 +62,7 @@ Import-Certificate -FilePath $certPath -CertStoreLocation Cert:\LocalMachine\Roo
 然後雙擊 `.msix` 安裝，或繼續在系統管理員 PowerShell 中執行：
 
 ```powershell
-Add-AppxPackage -Path "C:\path\to\Crid-1.0.0-release-windows.msix"
+Add-AppxPackage -Path "C:\path\to\Crid-1.1.0-release-windows.msix"
 ```
 
 如果安裝器提示 `0x800B0109`，通常代表憑證只匯入到了「目前使用者」，沒有匯入到「本機電腦」的受信任憑證儲存區。
@@ -91,13 +92,13 @@ Add-AppxPackage -Path "C:\path\to\Crid-1.0.0-release-windows.msix"
 - Drift 和 SQLite
 - file_picker
 - flutter_local_notifications
-- html、charset、spreadsheet_decoder
+- html、charset、spreadsheet_decoder、mime、syncfusion_flutter_pdf
 - icalendar_parser、rrule、timezone
 - material_color_utilities
 
 ## 已知問題
 
-- 只支援解析北京師範大學珠海校區的課表檔案
+- 目前主要支援解析北京師範大學珠海校區的課表和考試安排檔案
 - 通知系統可能不穩定
 - Windows 端尚不成熟，與 Android 端介面、功能差距較大
 

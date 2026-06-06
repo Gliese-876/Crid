@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/time/period.dart' as core_time;
 import '../../../data/database/timetable_time.dart';
 
 class IcsExportService {
@@ -41,23 +42,18 @@ class IcsExportService {
         continue;
       }
 
+      final timeRange = _timeRangeForSession(session, lessonSlots: lessonSlots);
       final start = _dateTimeForWeek(
         firstWeekMonday: firstWeekMonday,
         week: recurrence.firstWeek,
         weekday: session.weekday,
-        slot: lessonSlots.firstWhere(
-          (slot) => slot.section == session.startSection,
-        ),
-        useEndTime: false,
+        minuteOfDay: timeRange.startMinuteOfDay,
       );
       final end = _dateTimeForWeek(
         firstWeekMonday: firstWeekMonday,
         week: recurrence.firstWeek,
         weekday: session.weekday,
-        slot: lessonSlots.firstWhere(
-          (slot) => slot.section == session.endSection,
-        ),
-        useEndTime: true,
+        minuteOfDay: timeRange.endMinuteOfDay,
       );
 
       lines
@@ -71,7 +67,7 @@ class IcsExportService {
         )
         ..add('SUMMARY:${_escape(session.courseName)}')
         ..add('LOCATION:${_escape(session.location ?? '')}')
-        ..add('DESCRIPTION:${_escape(_descriptionFor(session))}')
+        ..add('DESCRIPTION:${_escape(_descriptionFor(session, timeRange))}')
         ..add('END:VEVENT');
     }
 
@@ -116,26 +112,57 @@ DateTime _dateTimeForWeek({
   required DateTime firstWeekMonday,
   required int week,
   required int weekday,
-  required LessonSlot slot,
-  required bool useEndTime,
+  required int minuteOfDay,
 }) {
   final date = DateTime(
     firstWeekMonday.year,
     firstWeekMonday.month,
     firstWeekMonday.day + ((week - 1) * 7) + (weekday - 1),
   );
-  final time = useEndTime ? slot.end : slot.start;
-  return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+  return DateTime(
+    date.year,
+    date.month,
+    date.day,
+    minuteOfDay ~/ 60,
+    minuteOfDay % 60,
+  );
 }
 
-String _descriptionFor(ClassSessionInfo session) {
+core_time.CourseTimeRange _timeRangeForSession(
+  ClassSessionInfo session, {
+  required Iterable<LessonSlot> lessonSlots,
+}) {
+  return session.startMinuteOfDay != null && session.endMinuteOfDay != null
+      ? core_time.CourseTimeRange.fromClockTimes(
+          startMinuteOfDay: session.startMinuteOfDay!,
+          endMinuteOfDay: session.endMinuteOfDay!,
+          lessonSlots: lessonSlots,
+        )
+      : core_time.CourseTimeRange.fromPeriods(
+          session.startSection,
+          session.endSection,
+          lessonSlots: lessonSlots,
+        );
+}
+
+String _descriptionFor(
+  ClassSessionInfo session,
+  core_time.CourseTimeRange timeRange,
+) {
   final parts = <String>[
     if (session.teacher?.isNotEmpty ?? false) 'Teacher: ${session.teacher}',
-    'Sections: ${session.startSection}-${session.endSection}',
+    'Time: ${_minuteLabel(timeRange.startMinuteOfDay)}-${_minuteLabel(timeRange.endMinuteOfDay)}',
     'Weeks: ${session.weekStart}-${session.weekEnd}${_parityLabel(session.weekParity)}',
     if (session.note?.isNotEmpty ?? false) 'Note: ${session.note}',
   ];
   return parts.join('\\n');
+}
+
+String _minuteLabel(int minuteOfDay) {
+  final hour = minuteOfDay ~/ 60;
+  final minute = minuteOfDay % 60;
+  return '${hour.toString().padLeft(2, '0')}:'
+      '${minute.toString().padLeft(2, '0')}';
 }
 
 String _parityLabel(WeekParity parity) {

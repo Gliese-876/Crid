@@ -2412,6 +2412,28 @@ class $ClassSessionsTable extends ClassSessions
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _startMinuteOfDayMeta = const VerificationMeta(
+    'startMinuteOfDay',
+  );
+  @override
+  late final GeneratedColumn<int> startMinuteOfDay = GeneratedColumn<int>(
+    'start_minute_of_day',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _endMinuteOfDayMeta = const VerificationMeta(
+    'endMinuteOfDay',
+  );
+  @override
+  late final GeneratedColumn<int> endMinuteOfDay = GeneratedColumn<int>(
+    'end_minute_of_day',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _weekStartMeta = const VerificationMeta(
     'weekStart',
   );
@@ -2496,6 +2518,8 @@ class $ClassSessionsTable extends ClassSessions
     weekday,
     startSection,
     endSection,
+    startMinuteOfDay,
+    endMinuteOfDay,
     weekStart,
     weekEnd,
     weekParity,
@@ -2553,6 +2577,24 @@ class $ClassSessionsTable extends ClassSessions
       );
     } else if (isInserting) {
       context.missing(_endSectionMeta);
+    }
+    if (data.containsKey('start_minute_of_day')) {
+      context.handle(
+        _startMinuteOfDayMeta,
+        startMinuteOfDay.isAcceptableOrUnknown(
+          data['start_minute_of_day']!,
+          _startMinuteOfDayMeta,
+        ),
+      );
+    }
+    if (data.containsKey('end_minute_of_day')) {
+      context.handle(
+        _endMinuteOfDayMeta,
+        endMinuteOfDay.isAcceptableOrUnknown(
+          data['end_minute_of_day']!,
+          _endMinuteOfDayMeta,
+        ),
+      );
     }
     if (data.containsKey('week_start')) {
       context.handle(
@@ -2629,6 +2671,14 @@ class $ClassSessionsTable extends ClassSessions
         DriftSqlType.int,
         data['${effectivePrefix}end_section'],
       )!,
+      startMinuteOfDay: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}start_minute_of_day'],
+      ),
+      endMinuteOfDay: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}end_minute_of_day'],
+      ),
       weekStart: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}week_start'],
@@ -2674,6 +2724,8 @@ class ClassSession extends DataClass implements Insertable<ClassSession> {
   final int weekday;
   final int startSection;
   final int endSection;
+  final int? startMinuteOfDay;
+  final int? endMinuteOfDay;
   final int weekStart;
   final int weekEnd;
   final String? weekParity;
@@ -2687,6 +2739,8 @@ class ClassSession extends DataClass implements Insertable<ClassSession> {
     required this.weekday,
     required this.startSection,
     required this.endSection,
+    this.startMinuteOfDay,
+    this.endMinuteOfDay,
     required this.weekStart,
     required this.weekEnd,
     this.weekParity,
@@ -2703,6 +2757,12 @@ class ClassSession extends DataClass implements Insertable<ClassSession> {
     map['weekday'] = Variable<int>(weekday);
     map['start_section'] = Variable<int>(startSection);
     map['end_section'] = Variable<int>(endSection);
+    if (!nullToAbsent || startMinuteOfDay != null) {
+      map['start_minute_of_day'] = Variable<int>(startMinuteOfDay);
+    }
+    if (!nullToAbsent || endMinuteOfDay != null) {
+      map['end_minute_of_day'] = Variable<int>(endMinuteOfDay);
+    }
     map['week_start'] = Variable<int>(weekStart);
     map['week_end'] = Variable<int>(weekEnd);
     if (!nullToAbsent || weekParity != null) {
@@ -2726,6 +2786,12 @@ class ClassSession extends DataClass implements Insertable<ClassSession> {
       weekday: Value(weekday),
       startSection: Value(startSection),
       endSection: Value(endSection),
+      startMinuteOfDay: startMinuteOfDay == null && nullToAbsent
+          ? const Value.absent()
+          : Value(startMinuteOfDay),
+      endMinuteOfDay: endMinuteOfDay == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endMinuteOfDay),
       weekStart: Value(weekStart),
       weekEnd: Value(weekEnd),
       weekParity: weekParity == null && nullToAbsent
@@ -2751,6 +2817,8 @@ class ClassSession extends DataClass implements Insertable<ClassSession> {
       weekday: serializer.fromJson<int>(json['weekday']),
       startSection: serializer.fromJson<int>(json['startSection']),
       endSection: serializer.fromJson<int>(json['endSection']),
+      startMinuteOfDay: serializer.fromJson<int?>(json['startMinuteOfDay']),
+      endMinuteOfDay: serializer.fromJson<int?>(json['endMinuteOfDay']),
       weekStart: serializer.fromJson<int>(json['weekStart']),
       weekEnd: serializer.fromJson<int>(json['weekEnd']),
       weekParity: serializer.fromJson<String?>(json['weekParity']),
@@ -2769,6 +2837,8 @@ class ClassSession extends DataClass implements Insertable<ClassSession> {
       'weekday': serializer.toJson<int>(weekday),
       'startSection': serializer.toJson<int>(startSection),
       'endSection': serializer.toJson<int>(endSection),
+      'startMinuteOfDay': serializer.toJson<int?>(startMinuteOfDay),
+      'endMinuteOfDay': serializer.toJson<int?>(endMinuteOfDay),
       'weekStart': serializer.toJson<int>(weekStart),
       'weekEnd': serializer.toJson<int>(weekEnd),
       'weekParity': serializer.toJson<String?>(weekParity),
@@ -2785,6 +2855,8 @@ class ClassSession extends DataClass implements Insertable<ClassSession> {
     int? weekday,
     int? startSection,
     int? endSection,
+    Value<int?> startMinuteOfDay = const Value.absent(),
+    Value<int?> endMinuteOfDay = const Value.absent(),
     int? weekStart,
     int? weekEnd,
     Value<String?> weekParity = const Value.absent(),
@@ -2798,6 +2870,12 @@ class ClassSession extends DataClass implements Insertable<ClassSession> {
     weekday: weekday ?? this.weekday,
     startSection: startSection ?? this.startSection,
     endSection: endSection ?? this.endSection,
+    startMinuteOfDay: startMinuteOfDay.present
+        ? startMinuteOfDay.value
+        : this.startMinuteOfDay,
+    endMinuteOfDay: endMinuteOfDay.present
+        ? endMinuteOfDay.value
+        : this.endMinuteOfDay,
     weekStart: weekStart ?? this.weekStart,
     weekEnd: weekEnd ?? this.weekEnd,
     weekParity: weekParity.present ? weekParity.value : this.weekParity,
@@ -2817,6 +2895,12 @@ class ClassSession extends DataClass implements Insertable<ClassSession> {
       endSection: data.endSection.present
           ? data.endSection.value
           : this.endSection,
+      startMinuteOfDay: data.startMinuteOfDay.present
+          ? data.startMinuteOfDay.value
+          : this.startMinuteOfDay,
+      endMinuteOfDay: data.endMinuteOfDay.present
+          ? data.endMinuteOfDay.value
+          : this.endMinuteOfDay,
       weekStart: data.weekStart.present ? data.weekStart.value : this.weekStart,
       weekEnd: data.weekEnd.present ? data.weekEnd.value : this.weekEnd,
       weekParity: data.weekParity.present
@@ -2837,6 +2921,8 @@ class ClassSession extends DataClass implements Insertable<ClassSession> {
           ..write('weekday: $weekday, ')
           ..write('startSection: $startSection, ')
           ..write('endSection: $endSection, ')
+          ..write('startMinuteOfDay: $startMinuteOfDay, ')
+          ..write('endMinuteOfDay: $endMinuteOfDay, ')
           ..write('weekStart: $weekStart, ')
           ..write('weekEnd: $weekEnd, ')
           ..write('weekParity: $weekParity, ')
@@ -2855,6 +2941,8 @@ class ClassSession extends DataClass implements Insertable<ClassSession> {
     weekday,
     startSection,
     endSection,
+    startMinuteOfDay,
+    endMinuteOfDay,
     weekStart,
     weekEnd,
     weekParity,
@@ -2872,6 +2960,8 @@ class ClassSession extends DataClass implements Insertable<ClassSession> {
           other.weekday == this.weekday &&
           other.startSection == this.startSection &&
           other.endSection == this.endSection &&
+          other.startMinuteOfDay == this.startMinuteOfDay &&
+          other.endMinuteOfDay == this.endMinuteOfDay &&
           other.weekStart == this.weekStart &&
           other.weekEnd == this.weekEnd &&
           other.weekParity == this.weekParity &&
@@ -2887,6 +2977,8 @@ class ClassSessionsCompanion extends UpdateCompanion<ClassSession> {
   final Value<int> weekday;
   final Value<int> startSection;
   final Value<int> endSection;
+  final Value<int?> startMinuteOfDay;
+  final Value<int?> endMinuteOfDay;
   final Value<int> weekStart;
   final Value<int> weekEnd;
   final Value<String?> weekParity;
@@ -2900,6 +2992,8 @@ class ClassSessionsCompanion extends UpdateCompanion<ClassSession> {
     this.weekday = const Value.absent(),
     this.startSection = const Value.absent(),
     this.endSection = const Value.absent(),
+    this.startMinuteOfDay = const Value.absent(),
+    this.endMinuteOfDay = const Value.absent(),
     this.weekStart = const Value.absent(),
     this.weekEnd = const Value.absent(),
     this.weekParity = const Value.absent(),
@@ -2914,6 +3008,8 @@ class ClassSessionsCompanion extends UpdateCompanion<ClassSession> {
     required int weekday,
     required int startSection,
     required int endSection,
+    this.startMinuteOfDay = const Value.absent(),
+    this.endMinuteOfDay = const Value.absent(),
     required int weekStart,
     required int weekEnd,
     this.weekParity = const Value.absent(),
@@ -2933,6 +3029,8 @@ class ClassSessionsCompanion extends UpdateCompanion<ClassSession> {
     Expression<int>? weekday,
     Expression<int>? startSection,
     Expression<int>? endSection,
+    Expression<int>? startMinuteOfDay,
+    Expression<int>? endMinuteOfDay,
     Expression<int>? weekStart,
     Expression<int>? weekEnd,
     Expression<String>? weekParity,
@@ -2947,6 +3045,8 @@ class ClassSessionsCompanion extends UpdateCompanion<ClassSession> {
       if (weekday != null) 'weekday': weekday,
       if (startSection != null) 'start_section': startSection,
       if (endSection != null) 'end_section': endSection,
+      if (startMinuteOfDay != null) 'start_minute_of_day': startMinuteOfDay,
+      if (endMinuteOfDay != null) 'end_minute_of_day': endMinuteOfDay,
       if (weekStart != null) 'week_start': weekStart,
       if (weekEnd != null) 'week_end': weekEnd,
       if (weekParity != null) 'week_parity': weekParity,
@@ -2963,6 +3063,8 @@ class ClassSessionsCompanion extends UpdateCompanion<ClassSession> {
     Value<int>? weekday,
     Value<int>? startSection,
     Value<int>? endSection,
+    Value<int?>? startMinuteOfDay,
+    Value<int?>? endMinuteOfDay,
     Value<int>? weekStart,
     Value<int>? weekEnd,
     Value<String?>? weekParity,
@@ -2977,6 +3079,8 @@ class ClassSessionsCompanion extends UpdateCompanion<ClassSession> {
       weekday: weekday ?? this.weekday,
       startSection: startSection ?? this.startSection,
       endSection: endSection ?? this.endSection,
+      startMinuteOfDay: startMinuteOfDay ?? this.startMinuteOfDay,
+      endMinuteOfDay: endMinuteOfDay ?? this.endMinuteOfDay,
       weekStart: weekStart ?? this.weekStart,
       weekEnd: weekEnd ?? this.weekEnd,
       weekParity: weekParity ?? this.weekParity,
@@ -3004,6 +3108,12 @@ class ClassSessionsCompanion extends UpdateCompanion<ClassSession> {
     }
     if (endSection.present) {
       map['end_section'] = Variable<int>(endSection.value);
+    }
+    if (startMinuteOfDay.present) {
+      map['start_minute_of_day'] = Variable<int>(startMinuteOfDay.value);
+    }
+    if (endMinuteOfDay.present) {
+      map['end_minute_of_day'] = Variable<int>(endMinuteOfDay.value);
     }
     if (weekStart.present) {
       map['week_start'] = Variable<int>(weekStart.value);
@@ -3037,6 +3147,8 @@ class ClassSessionsCompanion extends UpdateCompanion<ClassSession> {
           ..write('weekday: $weekday, ')
           ..write('startSection: $startSection, ')
           ..write('endSection: $endSection, ')
+          ..write('startMinuteOfDay: $startMinuteOfDay, ')
+          ..write('endMinuteOfDay: $endMinuteOfDay, ')
           ..write('weekStart: $weekStart, ')
           ..write('weekEnd: $weekEnd, ')
           ..write('weekParity: $weekParity, ')
@@ -3756,6 +3868,47 @@ class $ReminderRulesTable extends ReminderRules
     requiredDuringInsert: false,
     defaultValue: const Constant(20),
   );
+  static const VerificationMeta _reminderOffsetsJsonMeta =
+      const VerificationMeta('reminderOffsetsJson');
+  @override
+  late final GeneratedColumn<String> reminderOffsetsJson =
+      GeneratedColumn<String>(
+        'reminder_offsets_json',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _ignoreDndMeta = const VerificationMeta(
+    'ignoreDnd',
+  );
+  @override
+  late final GeneratedColumn<bool> ignoreDnd = GeneratedColumn<bool>(
+    'ignore_dnd',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("ignore_dnd" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _vibrateOnlyMeta = const VerificationMeta(
+    'vibrateOnly',
+  );
+  @override
+  late final GeneratedColumn<bool> vibrateOnly = GeneratedColumn<bool>(
+    'vibrate_only',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("vibrate_only" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _enabledMeta = const VerificationMeta(
     'enabled',
   );
@@ -3801,6 +3954,9 @@ class $ReminderRulesTable extends ReminderRules
     planId,
     courseId,
     minutesBefore,
+    reminderOffsetsJson,
+    ignoreDnd,
+    vibrateOnly,
     enabled,
     createdAt,
     updatedAt,
@@ -3838,6 +3994,30 @@ class $ReminderRulesTable extends ReminderRules
         minutesBefore.isAcceptableOrUnknown(
           data['minutes_before']!,
           _minutesBeforeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('reminder_offsets_json')) {
+      context.handle(
+        _reminderOffsetsJsonMeta,
+        reminderOffsetsJson.isAcceptableOrUnknown(
+          data['reminder_offsets_json']!,
+          _reminderOffsetsJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('ignore_dnd')) {
+      context.handle(
+        _ignoreDndMeta,
+        ignoreDnd.isAcceptableOrUnknown(data['ignore_dnd']!, _ignoreDndMeta),
+      );
+    }
+    if (data.containsKey('vibrate_only')) {
+      context.handle(
+        _vibrateOnlyMeta,
+        vibrateOnly.isAcceptableOrUnknown(
+          data['vibrate_only']!,
+          _vibrateOnlyMeta,
         ),
       );
     }
@@ -3884,6 +4064,18 @@ class $ReminderRulesTable extends ReminderRules
         DriftSqlType.int,
         data['${effectivePrefix}minutes_before'],
       )!,
+      reminderOffsetsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reminder_offsets_json'],
+      ),
+      ignoreDnd: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}ignore_dnd'],
+      )!,
+      vibrateOnly: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}vibrate_only'],
+      )!,
       enabled: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}enabled'],
@@ -3910,6 +4102,9 @@ class ReminderRule extends DataClass implements Insertable<ReminderRule> {
   final int? planId;
   final int? courseId;
   final int minutesBefore;
+  final String? reminderOffsetsJson;
+  final bool ignoreDnd;
+  final bool vibrateOnly;
   final bool enabled;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -3918,6 +4113,9 @@ class ReminderRule extends DataClass implements Insertable<ReminderRule> {
     this.planId,
     this.courseId,
     required this.minutesBefore,
+    this.reminderOffsetsJson,
+    required this.ignoreDnd,
+    required this.vibrateOnly,
     required this.enabled,
     required this.createdAt,
     required this.updatedAt,
@@ -3933,6 +4131,11 @@ class ReminderRule extends DataClass implements Insertable<ReminderRule> {
       map['course_id'] = Variable<int>(courseId);
     }
     map['minutes_before'] = Variable<int>(minutesBefore);
+    if (!nullToAbsent || reminderOffsetsJson != null) {
+      map['reminder_offsets_json'] = Variable<String>(reminderOffsetsJson);
+    }
+    map['ignore_dnd'] = Variable<bool>(ignoreDnd);
+    map['vibrate_only'] = Variable<bool>(vibrateOnly);
     map['enabled'] = Variable<bool>(enabled);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -3949,6 +4152,11 @@ class ReminderRule extends DataClass implements Insertable<ReminderRule> {
           ? const Value.absent()
           : Value(courseId),
       minutesBefore: Value(minutesBefore),
+      reminderOffsetsJson: reminderOffsetsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(reminderOffsetsJson),
+      ignoreDnd: Value(ignoreDnd),
+      vibrateOnly: Value(vibrateOnly),
       enabled: Value(enabled),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
@@ -3965,6 +4173,11 @@ class ReminderRule extends DataClass implements Insertable<ReminderRule> {
       planId: serializer.fromJson<int?>(json['planId']),
       courseId: serializer.fromJson<int?>(json['courseId']),
       minutesBefore: serializer.fromJson<int>(json['minutesBefore']),
+      reminderOffsetsJson: serializer.fromJson<String?>(
+        json['reminderOffsetsJson'],
+      ),
+      ignoreDnd: serializer.fromJson<bool>(json['ignoreDnd']),
+      vibrateOnly: serializer.fromJson<bool>(json['vibrateOnly']),
       enabled: serializer.fromJson<bool>(json['enabled']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -3978,6 +4191,9 @@ class ReminderRule extends DataClass implements Insertable<ReminderRule> {
       'planId': serializer.toJson<int?>(planId),
       'courseId': serializer.toJson<int?>(courseId),
       'minutesBefore': serializer.toJson<int>(minutesBefore),
+      'reminderOffsetsJson': serializer.toJson<String?>(reminderOffsetsJson),
+      'ignoreDnd': serializer.toJson<bool>(ignoreDnd),
+      'vibrateOnly': serializer.toJson<bool>(vibrateOnly),
       'enabled': serializer.toJson<bool>(enabled),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -3989,6 +4205,9 @@ class ReminderRule extends DataClass implements Insertable<ReminderRule> {
     Value<int?> planId = const Value.absent(),
     Value<int?> courseId = const Value.absent(),
     int? minutesBefore,
+    Value<String?> reminderOffsetsJson = const Value.absent(),
+    bool? ignoreDnd,
+    bool? vibrateOnly,
     bool? enabled,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -3997,6 +4216,11 @@ class ReminderRule extends DataClass implements Insertable<ReminderRule> {
     planId: planId.present ? planId.value : this.planId,
     courseId: courseId.present ? courseId.value : this.courseId,
     minutesBefore: minutesBefore ?? this.minutesBefore,
+    reminderOffsetsJson: reminderOffsetsJson.present
+        ? reminderOffsetsJson.value
+        : this.reminderOffsetsJson,
+    ignoreDnd: ignoreDnd ?? this.ignoreDnd,
+    vibrateOnly: vibrateOnly ?? this.vibrateOnly,
     enabled: enabled ?? this.enabled,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -4009,6 +4233,13 @@ class ReminderRule extends DataClass implements Insertable<ReminderRule> {
       minutesBefore: data.minutesBefore.present
           ? data.minutesBefore.value
           : this.minutesBefore,
+      reminderOffsetsJson: data.reminderOffsetsJson.present
+          ? data.reminderOffsetsJson.value
+          : this.reminderOffsetsJson,
+      ignoreDnd: data.ignoreDnd.present ? data.ignoreDnd.value : this.ignoreDnd,
+      vibrateOnly: data.vibrateOnly.present
+          ? data.vibrateOnly.value
+          : this.vibrateOnly,
       enabled: data.enabled.present ? data.enabled.value : this.enabled,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -4022,6 +4253,9 @@ class ReminderRule extends DataClass implements Insertable<ReminderRule> {
           ..write('planId: $planId, ')
           ..write('courseId: $courseId, ')
           ..write('minutesBefore: $minutesBefore, ')
+          ..write('reminderOffsetsJson: $reminderOffsetsJson, ')
+          ..write('ignoreDnd: $ignoreDnd, ')
+          ..write('vibrateOnly: $vibrateOnly, ')
           ..write('enabled: $enabled, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
@@ -4035,6 +4269,9 @@ class ReminderRule extends DataClass implements Insertable<ReminderRule> {
     planId,
     courseId,
     minutesBefore,
+    reminderOffsetsJson,
+    ignoreDnd,
+    vibrateOnly,
     enabled,
     createdAt,
     updatedAt,
@@ -4047,6 +4284,9 @@ class ReminderRule extends DataClass implements Insertable<ReminderRule> {
           other.planId == this.planId &&
           other.courseId == this.courseId &&
           other.minutesBefore == this.minutesBefore &&
+          other.reminderOffsetsJson == this.reminderOffsetsJson &&
+          other.ignoreDnd == this.ignoreDnd &&
+          other.vibrateOnly == this.vibrateOnly &&
           other.enabled == this.enabled &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
@@ -4057,6 +4297,9 @@ class ReminderRulesCompanion extends UpdateCompanion<ReminderRule> {
   final Value<int?> planId;
   final Value<int?> courseId;
   final Value<int> minutesBefore;
+  final Value<String?> reminderOffsetsJson;
+  final Value<bool> ignoreDnd;
+  final Value<bool> vibrateOnly;
   final Value<bool> enabled;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
@@ -4065,6 +4308,9 @@ class ReminderRulesCompanion extends UpdateCompanion<ReminderRule> {
     this.planId = const Value.absent(),
     this.courseId = const Value.absent(),
     this.minutesBefore = const Value.absent(),
+    this.reminderOffsetsJson = const Value.absent(),
+    this.ignoreDnd = const Value.absent(),
+    this.vibrateOnly = const Value.absent(),
     this.enabled = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -4074,6 +4320,9 @@ class ReminderRulesCompanion extends UpdateCompanion<ReminderRule> {
     this.planId = const Value.absent(),
     this.courseId = const Value.absent(),
     this.minutesBefore = const Value.absent(),
+    this.reminderOffsetsJson = const Value.absent(),
+    this.ignoreDnd = const Value.absent(),
+    this.vibrateOnly = const Value.absent(),
     this.enabled = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -4083,6 +4332,9 @@ class ReminderRulesCompanion extends UpdateCompanion<ReminderRule> {
     Expression<int>? planId,
     Expression<int>? courseId,
     Expression<int>? minutesBefore,
+    Expression<String>? reminderOffsetsJson,
+    Expression<bool>? ignoreDnd,
+    Expression<bool>? vibrateOnly,
     Expression<bool>? enabled,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -4092,6 +4344,10 @@ class ReminderRulesCompanion extends UpdateCompanion<ReminderRule> {
       if (planId != null) 'plan_id': planId,
       if (courseId != null) 'course_id': courseId,
       if (minutesBefore != null) 'minutes_before': minutesBefore,
+      if (reminderOffsetsJson != null)
+        'reminder_offsets_json': reminderOffsetsJson,
+      if (ignoreDnd != null) 'ignore_dnd': ignoreDnd,
+      if (vibrateOnly != null) 'vibrate_only': vibrateOnly,
       if (enabled != null) 'enabled': enabled,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -4103,6 +4359,9 @@ class ReminderRulesCompanion extends UpdateCompanion<ReminderRule> {
     Value<int?>? planId,
     Value<int?>? courseId,
     Value<int>? minutesBefore,
+    Value<String?>? reminderOffsetsJson,
+    Value<bool>? ignoreDnd,
+    Value<bool>? vibrateOnly,
     Value<bool>? enabled,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
@@ -4112,6 +4371,9 @@ class ReminderRulesCompanion extends UpdateCompanion<ReminderRule> {
       planId: planId ?? this.planId,
       courseId: courseId ?? this.courseId,
       minutesBefore: minutesBefore ?? this.minutesBefore,
+      reminderOffsetsJson: reminderOffsetsJson ?? this.reminderOffsetsJson,
+      ignoreDnd: ignoreDnd ?? this.ignoreDnd,
+      vibrateOnly: vibrateOnly ?? this.vibrateOnly,
       enabled: enabled ?? this.enabled,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -4133,6 +4395,17 @@ class ReminderRulesCompanion extends UpdateCompanion<ReminderRule> {
     if (minutesBefore.present) {
       map['minutes_before'] = Variable<int>(minutesBefore.value);
     }
+    if (reminderOffsetsJson.present) {
+      map['reminder_offsets_json'] = Variable<String>(
+        reminderOffsetsJson.value,
+      );
+    }
+    if (ignoreDnd.present) {
+      map['ignore_dnd'] = Variable<bool>(ignoreDnd.value);
+    }
+    if (vibrateOnly.present) {
+      map['vibrate_only'] = Variable<bool>(vibrateOnly.value);
+    }
     if (enabled.present) {
       map['enabled'] = Variable<bool>(enabled.value);
     }
@@ -4152,9 +4425,1051 @@ class ReminderRulesCompanion extends UpdateCompanion<ReminderRule> {
           ..write('planId: $planId, ')
           ..write('courseId: $courseId, ')
           ..write('minutesBefore: $minutesBefore, ')
+          ..write('reminderOffsetsJson: $reminderOffsetsJson, ')
+          ..write('ignoreDnd: $ignoreDnd, ')
+          ..write('vibrateOnly: $vibrateOnly, ')
           ..write('enabled: $enabled, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ExamSchedulesTable extends ExamSchedules
+    with TableInfo<$ExamSchedulesTable, ExamSchedule> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ExamSchedulesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _importBatchIdMeta = const VerificationMeta(
+    'importBatchId',
+  );
+  @override
+  late final GeneratedColumn<int> importBatchId = GeneratedColumn<int>(
+    'import_batch_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES import_batches (id)',
+    ),
+  );
+  static const VerificationMeta _sourceRecordIdMeta = const VerificationMeta(
+    'sourceRecordId',
+  );
+  @override
+  late final GeneratedColumn<int> sourceRecordId = GeneratedColumn<int>(
+    'source_record_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES source_records (id)',
+    ),
+  );
+  static const VerificationMeta _examRoundMeta = const VerificationMeta(
+    'examRound',
+  );
+  @override
+  late final GeneratedColumn<String> examRound = GeneratedColumn<String>(
+    'exam_round',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 160,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _courseCodeMeta = const VerificationMeta(
+    'courseCode',
+  );
+  @override
+  late final GeneratedColumn<String> courseCode = GeneratedColumn<String>(
+    'course_code',
+    aliasedName,
+    true,
+    additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 64),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _courseNameMeta = const VerificationMeta(
+    'courseName',
+  );
+  @override
+  late final GeneratedColumn<String> courseName = GeneratedColumn<String>(
+    'course_name',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 180,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _creditsMeta = const VerificationMeta(
+    'credits',
+  );
+  @override
+  late final GeneratedColumn<double> credits = GeneratedColumn<double>(
+    'credits',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _categoryMeta = const VerificationMeta(
+    'category',
+  );
+  @override
+  late final GeneratedColumn<String> category = GeneratedColumn<String>(
+    'category',
+    aliasedName,
+    true,
+    additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 160),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _assessmentMethodMeta = const VerificationMeta(
+    'assessmentMethod',
+  );
+  @override
+  late final GeneratedColumn<String> assessmentMethod = GeneratedColumn<String>(
+    'assessment_method',
+    aliasedName,
+    true,
+    additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 64),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _startAtMeta = const VerificationMeta(
+    'startAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> startAt = GeneratedColumn<DateTime>(
+    'start_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _endAtMeta = const VerificationMeta('endAt');
+  @override
+  late final GeneratedColumn<DateTime> endAt = GeneratedColumn<DateTime>(
+    'end_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _semesterWeekMeta = const VerificationMeta(
+    'semesterWeek',
+  );
+  @override
+  late final GeneratedColumn<int> semesterWeek = GeneratedColumn<int>(
+    'semester_week',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _weekdayMeta = const VerificationMeta(
+    'weekday',
+  );
+  @override
+  late final GeneratedColumn<int> weekday = GeneratedColumn<int>(
+    'weekday',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _locationMeta = const VerificationMeta(
+    'location',
+  );
+  @override
+  late final GeneratedColumn<String> location = GeneratedColumn<String>(
+    'location',
+    aliasedName,
+    true,
+    additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 220),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _seatNumberMeta = const VerificationMeta(
+    'seatNumber',
+  );
+  @override
+  late final GeneratedColumn<String> seatNumber = GeneratedColumn<String>(
+    'seat_number',
+    aliasedName,
+    true,
+    additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 32),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _rawTextMeta = const VerificationMeta(
+    'rawText',
+  );
+  @override
+  late final GeneratedColumn<String> rawText = GeneratedColumn<String>(
+    'raw_text',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isHiddenMeta = const VerificationMeta(
+    'isHidden',
+  );
+  @override
+  late final GeneratedColumn<bool> isHidden = GeneratedColumn<bool>(
+    'is_hidden',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_hidden" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    importBatchId,
+    sourceRecordId,
+    examRound,
+    courseCode,
+    courseName,
+    credits,
+    category,
+    assessmentMethod,
+    startAt,
+    endAt,
+    semesterWeek,
+    weekday,
+    location,
+    seatNumber,
+    rawText,
+    isHidden,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'exam_schedules';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ExamSchedule> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('import_batch_id')) {
+      context.handle(
+        _importBatchIdMeta,
+        importBatchId.isAcceptableOrUnknown(
+          data['import_batch_id']!,
+          _importBatchIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('source_record_id')) {
+      context.handle(
+        _sourceRecordIdMeta,
+        sourceRecordId.isAcceptableOrUnknown(
+          data['source_record_id']!,
+          _sourceRecordIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('exam_round')) {
+      context.handle(
+        _examRoundMeta,
+        examRound.isAcceptableOrUnknown(data['exam_round']!, _examRoundMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_examRoundMeta);
+    }
+    if (data.containsKey('course_code')) {
+      context.handle(
+        _courseCodeMeta,
+        courseCode.isAcceptableOrUnknown(data['course_code']!, _courseCodeMeta),
+      );
+    }
+    if (data.containsKey('course_name')) {
+      context.handle(
+        _courseNameMeta,
+        courseName.isAcceptableOrUnknown(data['course_name']!, _courseNameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_courseNameMeta);
+    }
+    if (data.containsKey('credits')) {
+      context.handle(
+        _creditsMeta,
+        credits.isAcceptableOrUnknown(data['credits']!, _creditsMeta),
+      );
+    }
+    if (data.containsKey('category')) {
+      context.handle(
+        _categoryMeta,
+        category.isAcceptableOrUnknown(data['category']!, _categoryMeta),
+      );
+    }
+    if (data.containsKey('assessment_method')) {
+      context.handle(
+        _assessmentMethodMeta,
+        assessmentMethod.isAcceptableOrUnknown(
+          data['assessment_method']!,
+          _assessmentMethodMeta,
+        ),
+      );
+    }
+    if (data.containsKey('start_at')) {
+      context.handle(
+        _startAtMeta,
+        startAt.isAcceptableOrUnknown(data['start_at']!, _startAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startAtMeta);
+    }
+    if (data.containsKey('end_at')) {
+      context.handle(
+        _endAtMeta,
+        endAt.isAcceptableOrUnknown(data['end_at']!, _endAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_endAtMeta);
+    }
+    if (data.containsKey('semester_week')) {
+      context.handle(
+        _semesterWeekMeta,
+        semesterWeek.isAcceptableOrUnknown(
+          data['semester_week']!,
+          _semesterWeekMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_semesterWeekMeta);
+    }
+    if (data.containsKey('weekday')) {
+      context.handle(
+        _weekdayMeta,
+        weekday.isAcceptableOrUnknown(data['weekday']!, _weekdayMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_weekdayMeta);
+    }
+    if (data.containsKey('location')) {
+      context.handle(
+        _locationMeta,
+        location.isAcceptableOrUnknown(data['location']!, _locationMeta),
+      );
+    }
+    if (data.containsKey('seat_number')) {
+      context.handle(
+        _seatNumberMeta,
+        seatNumber.isAcceptableOrUnknown(data['seat_number']!, _seatNumberMeta),
+      );
+    }
+    if (data.containsKey('raw_text')) {
+      context.handle(
+        _rawTextMeta,
+        rawText.isAcceptableOrUnknown(data['raw_text']!, _rawTextMeta),
+      );
+    }
+    if (data.containsKey('is_hidden')) {
+      context.handle(
+        _isHiddenMeta,
+        isHidden.isAcceptableOrUnknown(data['is_hidden']!, _isHiddenMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ExamSchedule map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ExamSchedule(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      importBatchId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}import_batch_id'],
+      ),
+      sourceRecordId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}source_record_id'],
+      ),
+      examRound: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}exam_round'],
+      )!,
+      courseCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}course_code'],
+      ),
+      courseName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}course_name'],
+      )!,
+      credits: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}credits'],
+      ),
+      category: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category'],
+      ),
+      assessmentMethod: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}assessment_method'],
+      ),
+      startAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}start_at'],
+      )!,
+      endAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}end_at'],
+      )!,
+      semesterWeek: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}semester_week'],
+      )!,
+      weekday: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}weekday'],
+      )!,
+      location: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}location'],
+      ),
+      seatNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}seat_number'],
+      ),
+      rawText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}raw_text'],
+      ),
+      isHidden: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_hidden'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ExamSchedulesTable createAlias(String alias) {
+    return $ExamSchedulesTable(attachedDatabase, alias);
+  }
+}
+
+class ExamSchedule extends DataClass implements Insertable<ExamSchedule> {
+  final int id;
+  final int? importBatchId;
+  final int? sourceRecordId;
+  final String examRound;
+  final String? courseCode;
+  final String courseName;
+  final double? credits;
+  final String? category;
+  final String? assessmentMethod;
+  final DateTime startAt;
+  final DateTime endAt;
+  final int semesterWeek;
+  final int weekday;
+  final String? location;
+  final String? seatNumber;
+  final String? rawText;
+  final bool isHidden;
+  final DateTime createdAt;
+  const ExamSchedule({
+    required this.id,
+    this.importBatchId,
+    this.sourceRecordId,
+    required this.examRound,
+    this.courseCode,
+    required this.courseName,
+    this.credits,
+    this.category,
+    this.assessmentMethod,
+    required this.startAt,
+    required this.endAt,
+    required this.semesterWeek,
+    required this.weekday,
+    this.location,
+    this.seatNumber,
+    this.rawText,
+    required this.isHidden,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || importBatchId != null) {
+      map['import_batch_id'] = Variable<int>(importBatchId);
+    }
+    if (!nullToAbsent || sourceRecordId != null) {
+      map['source_record_id'] = Variable<int>(sourceRecordId);
+    }
+    map['exam_round'] = Variable<String>(examRound);
+    if (!nullToAbsent || courseCode != null) {
+      map['course_code'] = Variable<String>(courseCode);
+    }
+    map['course_name'] = Variable<String>(courseName);
+    if (!nullToAbsent || credits != null) {
+      map['credits'] = Variable<double>(credits);
+    }
+    if (!nullToAbsent || category != null) {
+      map['category'] = Variable<String>(category);
+    }
+    if (!nullToAbsent || assessmentMethod != null) {
+      map['assessment_method'] = Variable<String>(assessmentMethod);
+    }
+    map['start_at'] = Variable<DateTime>(startAt);
+    map['end_at'] = Variable<DateTime>(endAt);
+    map['semester_week'] = Variable<int>(semesterWeek);
+    map['weekday'] = Variable<int>(weekday);
+    if (!nullToAbsent || location != null) {
+      map['location'] = Variable<String>(location);
+    }
+    if (!nullToAbsent || seatNumber != null) {
+      map['seat_number'] = Variable<String>(seatNumber);
+    }
+    if (!nullToAbsent || rawText != null) {
+      map['raw_text'] = Variable<String>(rawText);
+    }
+    map['is_hidden'] = Variable<bool>(isHidden);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ExamSchedulesCompanion toCompanion(bool nullToAbsent) {
+    return ExamSchedulesCompanion(
+      id: Value(id),
+      importBatchId: importBatchId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(importBatchId),
+      sourceRecordId: sourceRecordId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceRecordId),
+      examRound: Value(examRound),
+      courseCode: courseCode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(courseCode),
+      courseName: Value(courseName),
+      credits: credits == null && nullToAbsent
+          ? const Value.absent()
+          : Value(credits),
+      category: category == null && nullToAbsent
+          ? const Value.absent()
+          : Value(category),
+      assessmentMethod: assessmentMethod == null && nullToAbsent
+          ? const Value.absent()
+          : Value(assessmentMethod),
+      startAt: Value(startAt),
+      endAt: Value(endAt),
+      semesterWeek: Value(semesterWeek),
+      weekday: Value(weekday),
+      location: location == null && nullToAbsent
+          ? const Value.absent()
+          : Value(location),
+      seatNumber: seatNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(seatNumber),
+      rawText: rawText == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rawText),
+      isHidden: Value(isHidden),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ExamSchedule.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ExamSchedule(
+      id: serializer.fromJson<int>(json['id']),
+      importBatchId: serializer.fromJson<int?>(json['importBatchId']),
+      sourceRecordId: serializer.fromJson<int?>(json['sourceRecordId']),
+      examRound: serializer.fromJson<String>(json['examRound']),
+      courseCode: serializer.fromJson<String?>(json['courseCode']),
+      courseName: serializer.fromJson<String>(json['courseName']),
+      credits: serializer.fromJson<double?>(json['credits']),
+      category: serializer.fromJson<String?>(json['category']),
+      assessmentMethod: serializer.fromJson<String?>(json['assessmentMethod']),
+      startAt: serializer.fromJson<DateTime>(json['startAt']),
+      endAt: serializer.fromJson<DateTime>(json['endAt']),
+      semesterWeek: serializer.fromJson<int>(json['semesterWeek']),
+      weekday: serializer.fromJson<int>(json['weekday']),
+      location: serializer.fromJson<String?>(json['location']),
+      seatNumber: serializer.fromJson<String?>(json['seatNumber']),
+      rawText: serializer.fromJson<String?>(json['rawText']),
+      isHidden: serializer.fromJson<bool>(json['isHidden']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'importBatchId': serializer.toJson<int?>(importBatchId),
+      'sourceRecordId': serializer.toJson<int?>(sourceRecordId),
+      'examRound': serializer.toJson<String>(examRound),
+      'courseCode': serializer.toJson<String?>(courseCode),
+      'courseName': serializer.toJson<String>(courseName),
+      'credits': serializer.toJson<double?>(credits),
+      'category': serializer.toJson<String?>(category),
+      'assessmentMethod': serializer.toJson<String?>(assessmentMethod),
+      'startAt': serializer.toJson<DateTime>(startAt),
+      'endAt': serializer.toJson<DateTime>(endAt),
+      'semesterWeek': serializer.toJson<int>(semesterWeek),
+      'weekday': serializer.toJson<int>(weekday),
+      'location': serializer.toJson<String?>(location),
+      'seatNumber': serializer.toJson<String?>(seatNumber),
+      'rawText': serializer.toJson<String?>(rawText),
+      'isHidden': serializer.toJson<bool>(isHidden),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  ExamSchedule copyWith({
+    int? id,
+    Value<int?> importBatchId = const Value.absent(),
+    Value<int?> sourceRecordId = const Value.absent(),
+    String? examRound,
+    Value<String?> courseCode = const Value.absent(),
+    String? courseName,
+    Value<double?> credits = const Value.absent(),
+    Value<String?> category = const Value.absent(),
+    Value<String?> assessmentMethod = const Value.absent(),
+    DateTime? startAt,
+    DateTime? endAt,
+    int? semesterWeek,
+    int? weekday,
+    Value<String?> location = const Value.absent(),
+    Value<String?> seatNumber = const Value.absent(),
+    Value<String?> rawText = const Value.absent(),
+    bool? isHidden,
+    DateTime? createdAt,
+  }) => ExamSchedule(
+    id: id ?? this.id,
+    importBatchId: importBatchId.present
+        ? importBatchId.value
+        : this.importBatchId,
+    sourceRecordId: sourceRecordId.present
+        ? sourceRecordId.value
+        : this.sourceRecordId,
+    examRound: examRound ?? this.examRound,
+    courseCode: courseCode.present ? courseCode.value : this.courseCode,
+    courseName: courseName ?? this.courseName,
+    credits: credits.present ? credits.value : this.credits,
+    category: category.present ? category.value : this.category,
+    assessmentMethod: assessmentMethod.present
+        ? assessmentMethod.value
+        : this.assessmentMethod,
+    startAt: startAt ?? this.startAt,
+    endAt: endAt ?? this.endAt,
+    semesterWeek: semesterWeek ?? this.semesterWeek,
+    weekday: weekday ?? this.weekday,
+    location: location.present ? location.value : this.location,
+    seatNumber: seatNumber.present ? seatNumber.value : this.seatNumber,
+    rawText: rawText.present ? rawText.value : this.rawText,
+    isHidden: isHidden ?? this.isHidden,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ExamSchedule copyWithCompanion(ExamSchedulesCompanion data) {
+    return ExamSchedule(
+      id: data.id.present ? data.id.value : this.id,
+      importBatchId: data.importBatchId.present
+          ? data.importBatchId.value
+          : this.importBatchId,
+      sourceRecordId: data.sourceRecordId.present
+          ? data.sourceRecordId.value
+          : this.sourceRecordId,
+      examRound: data.examRound.present ? data.examRound.value : this.examRound,
+      courseCode: data.courseCode.present
+          ? data.courseCode.value
+          : this.courseCode,
+      courseName: data.courseName.present
+          ? data.courseName.value
+          : this.courseName,
+      credits: data.credits.present ? data.credits.value : this.credits,
+      category: data.category.present ? data.category.value : this.category,
+      assessmentMethod: data.assessmentMethod.present
+          ? data.assessmentMethod.value
+          : this.assessmentMethod,
+      startAt: data.startAt.present ? data.startAt.value : this.startAt,
+      endAt: data.endAt.present ? data.endAt.value : this.endAt,
+      semesterWeek: data.semesterWeek.present
+          ? data.semesterWeek.value
+          : this.semesterWeek,
+      weekday: data.weekday.present ? data.weekday.value : this.weekday,
+      location: data.location.present ? data.location.value : this.location,
+      seatNumber: data.seatNumber.present
+          ? data.seatNumber.value
+          : this.seatNumber,
+      rawText: data.rawText.present ? data.rawText.value : this.rawText,
+      isHidden: data.isHidden.present ? data.isHidden.value : this.isHidden,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ExamSchedule(')
+          ..write('id: $id, ')
+          ..write('importBatchId: $importBatchId, ')
+          ..write('sourceRecordId: $sourceRecordId, ')
+          ..write('examRound: $examRound, ')
+          ..write('courseCode: $courseCode, ')
+          ..write('courseName: $courseName, ')
+          ..write('credits: $credits, ')
+          ..write('category: $category, ')
+          ..write('assessmentMethod: $assessmentMethod, ')
+          ..write('startAt: $startAt, ')
+          ..write('endAt: $endAt, ')
+          ..write('semesterWeek: $semesterWeek, ')
+          ..write('weekday: $weekday, ')
+          ..write('location: $location, ')
+          ..write('seatNumber: $seatNumber, ')
+          ..write('rawText: $rawText, ')
+          ..write('isHidden: $isHidden, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    importBatchId,
+    sourceRecordId,
+    examRound,
+    courseCode,
+    courseName,
+    credits,
+    category,
+    assessmentMethod,
+    startAt,
+    endAt,
+    semesterWeek,
+    weekday,
+    location,
+    seatNumber,
+    rawText,
+    isHidden,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ExamSchedule &&
+          other.id == this.id &&
+          other.importBatchId == this.importBatchId &&
+          other.sourceRecordId == this.sourceRecordId &&
+          other.examRound == this.examRound &&
+          other.courseCode == this.courseCode &&
+          other.courseName == this.courseName &&
+          other.credits == this.credits &&
+          other.category == this.category &&
+          other.assessmentMethod == this.assessmentMethod &&
+          other.startAt == this.startAt &&
+          other.endAt == this.endAt &&
+          other.semesterWeek == this.semesterWeek &&
+          other.weekday == this.weekday &&
+          other.location == this.location &&
+          other.seatNumber == this.seatNumber &&
+          other.rawText == this.rawText &&
+          other.isHidden == this.isHidden &&
+          other.createdAt == this.createdAt);
+}
+
+class ExamSchedulesCompanion extends UpdateCompanion<ExamSchedule> {
+  final Value<int> id;
+  final Value<int?> importBatchId;
+  final Value<int?> sourceRecordId;
+  final Value<String> examRound;
+  final Value<String?> courseCode;
+  final Value<String> courseName;
+  final Value<double?> credits;
+  final Value<String?> category;
+  final Value<String?> assessmentMethod;
+  final Value<DateTime> startAt;
+  final Value<DateTime> endAt;
+  final Value<int> semesterWeek;
+  final Value<int> weekday;
+  final Value<String?> location;
+  final Value<String?> seatNumber;
+  final Value<String?> rawText;
+  final Value<bool> isHidden;
+  final Value<DateTime> createdAt;
+  const ExamSchedulesCompanion({
+    this.id = const Value.absent(),
+    this.importBatchId = const Value.absent(),
+    this.sourceRecordId = const Value.absent(),
+    this.examRound = const Value.absent(),
+    this.courseCode = const Value.absent(),
+    this.courseName = const Value.absent(),
+    this.credits = const Value.absent(),
+    this.category = const Value.absent(),
+    this.assessmentMethod = const Value.absent(),
+    this.startAt = const Value.absent(),
+    this.endAt = const Value.absent(),
+    this.semesterWeek = const Value.absent(),
+    this.weekday = const Value.absent(),
+    this.location = const Value.absent(),
+    this.seatNumber = const Value.absent(),
+    this.rawText = const Value.absent(),
+    this.isHidden = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  ExamSchedulesCompanion.insert({
+    this.id = const Value.absent(),
+    this.importBatchId = const Value.absent(),
+    this.sourceRecordId = const Value.absent(),
+    required String examRound,
+    this.courseCode = const Value.absent(),
+    required String courseName,
+    this.credits = const Value.absent(),
+    this.category = const Value.absent(),
+    this.assessmentMethod = const Value.absent(),
+    required DateTime startAt,
+    required DateTime endAt,
+    required int semesterWeek,
+    required int weekday,
+    this.location = const Value.absent(),
+    this.seatNumber = const Value.absent(),
+    this.rawText = const Value.absent(),
+    this.isHidden = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : examRound = Value(examRound),
+       courseName = Value(courseName),
+       startAt = Value(startAt),
+       endAt = Value(endAt),
+       semesterWeek = Value(semesterWeek),
+       weekday = Value(weekday);
+  static Insertable<ExamSchedule> custom({
+    Expression<int>? id,
+    Expression<int>? importBatchId,
+    Expression<int>? sourceRecordId,
+    Expression<String>? examRound,
+    Expression<String>? courseCode,
+    Expression<String>? courseName,
+    Expression<double>? credits,
+    Expression<String>? category,
+    Expression<String>? assessmentMethod,
+    Expression<DateTime>? startAt,
+    Expression<DateTime>? endAt,
+    Expression<int>? semesterWeek,
+    Expression<int>? weekday,
+    Expression<String>? location,
+    Expression<String>? seatNumber,
+    Expression<String>? rawText,
+    Expression<bool>? isHidden,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (importBatchId != null) 'import_batch_id': importBatchId,
+      if (sourceRecordId != null) 'source_record_id': sourceRecordId,
+      if (examRound != null) 'exam_round': examRound,
+      if (courseCode != null) 'course_code': courseCode,
+      if (courseName != null) 'course_name': courseName,
+      if (credits != null) 'credits': credits,
+      if (category != null) 'category': category,
+      if (assessmentMethod != null) 'assessment_method': assessmentMethod,
+      if (startAt != null) 'start_at': startAt,
+      if (endAt != null) 'end_at': endAt,
+      if (semesterWeek != null) 'semester_week': semesterWeek,
+      if (weekday != null) 'weekday': weekday,
+      if (location != null) 'location': location,
+      if (seatNumber != null) 'seat_number': seatNumber,
+      if (rawText != null) 'raw_text': rawText,
+      if (isHidden != null) 'is_hidden': isHidden,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  ExamSchedulesCompanion copyWith({
+    Value<int>? id,
+    Value<int?>? importBatchId,
+    Value<int?>? sourceRecordId,
+    Value<String>? examRound,
+    Value<String?>? courseCode,
+    Value<String>? courseName,
+    Value<double?>? credits,
+    Value<String?>? category,
+    Value<String?>? assessmentMethod,
+    Value<DateTime>? startAt,
+    Value<DateTime>? endAt,
+    Value<int>? semesterWeek,
+    Value<int>? weekday,
+    Value<String?>? location,
+    Value<String?>? seatNumber,
+    Value<String?>? rawText,
+    Value<bool>? isHidden,
+    Value<DateTime>? createdAt,
+  }) {
+    return ExamSchedulesCompanion(
+      id: id ?? this.id,
+      importBatchId: importBatchId ?? this.importBatchId,
+      sourceRecordId: sourceRecordId ?? this.sourceRecordId,
+      examRound: examRound ?? this.examRound,
+      courseCode: courseCode ?? this.courseCode,
+      courseName: courseName ?? this.courseName,
+      credits: credits ?? this.credits,
+      category: category ?? this.category,
+      assessmentMethod: assessmentMethod ?? this.assessmentMethod,
+      startAt: startAt ?? this.startAt,
+      endAt: endAt ?? this.endAt,
+      semesterWeek: semesterWeek ?? this.semesterWeek,
+      weekday: weekday ?? this.weekday,
+      location: location ?? this.location,
+      seatNumber: seatNumber ?? this.seatNumber,
+      rawText: rawText ?? this.rawText,
+      isHidden: isHidden ?? this.isHidden,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (importBatchId.present) {
+      map['import_batch_id'] = Variable<int>(importBatchId.value);
+    }
+    if (sourceRecordId.present) {
+      map['source_record_id'] = Variable<int>(sourceRecordId.value);
+    }
+    if (examRound.present) {
+      map['exam_round'] = Variable<String>(examRound.value);
+    }
+    if (courseCode.present) {
+      map['course_code'] = Variable<String>(courseCode.value);
+    }
+    if (courseName.present) {
+      map['course_name'] = Variable<String>(courseName.value);
+    }
+    if (credits.present) {
+      map['credits'] = Variable<double>(credits.value);
+    }
+    if (category.present) {
+      map['category'] = Variable<String>(category.value);
+    }
+    if (assessmentMethod.present) {
+      map['assessment_method'] = Variable<String>(assessmentMethod.value);
+    }
+    if (startAt.present) {
+      map['start_at'] = Variable<DateTime>(startAt.value);
+    }
+    if (endAt.present) {
+      map['end_at'] = Variable<DateTime>(endAt.value);
+    }
+    if (semesterWeek.present) {
+      map['semester_week'] = Variable<int>(semesterWeek.value);
+    }
+    if (weekday.present) {
+      map['weekday'] = Variable<int>(weekday.value);
+    }
+    if (location.present) {
+      map['location'] = Variable<String>(location.value);
+    }
+    if (seatNumber.present) {
+      map['seat_number'] = Variable<String>(seatNumber.value);
+    }
+    if (rawText.present) {
+      map['raw_text'] = Variable<String>(rawText.value);
+    }
+    if (isHidden.present) {
+      map['is_hidden'] = Variable<bool>(isHidden.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ExamSchedulesCompanion(')
+          ..write('id: $id, ')
+          ..write('importBatchId: $importBatchId, ')
+          ..write('sourceRecordId: $sourceRecordId, ')
+          ..write('examRound: $examRound, ')
+          ..write('courseCode: $courseCode, ')
+          ..write('courseName: $courseName, ')
+          ..write('credits: $credits, ')
+          ..write('category: $category, ')
+          ..write('assessmentMethod: $assessmentMethod, ')
+          ..write('startAt: $startAt, ')
+          ..write('endAt: $endAt, ')
+          ..write('semesterWeek: $semesterWeek, ')
+          ..write('weekday: $weekday, ')
+          ..write('location: $location, ')
+          ..write('seatNumber: $seatNumber, ')
+          ..write('rawText: $rawText, ')
+          ..write('isHidden: $isHidden, ')
+          ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
@@ -4171,6 +5486,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ClassSessionsTable classSessions = $ClassSessionsTable(this);
   late final $MergeConflictsTable mergeConflicts = $MergeConflictsTable(this);
   late final $ReminderRulesTable reminderRules = $ReminderRulesTable(this);
+  late final $ExamSchedulesTable examSchedules = $ExamSchedulesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4184,6 +5500,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     classSessions,
     mergeConflicts,
     reminderRules,
+    examSchedules,
   ];
 }
 
@@ -5251,6 +6568,27 @@ final class $$ImportBatchesTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$ExamSchedulesTable, List<ExamSchedule>>
+  _examSchedulesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.examSchedules,
+    aliasName: $_aliasNameGenerator(
+      db.importBatches.id,
+      db.examSchedules.importBatchId,
+    ),
+  );
+
+  $$ExamSchedulesTableProcessedTableManager get examSchedulesRefs {
+    final manager = $$ExamSchedulesTableTableManager(
+      $_db,
+      $_db.examSchedules,
+    ).filter((f) => f.importBatchId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_examSchedulesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$ImportBatchesTableFilterComposer
@@ -5328,6 +6666,31 @@ class $$ImportBatchesTableFilterComposer
           }) => $$MergeConflictsTableFilterComposer(
             $db: $db,
             $table: $db.mergeConflicts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> examSchedulesRefs(
+    Expression<bool> Function($$ExamSchedulesTableFilterComposer f) f,
+  ) {
+    final $$ExamSchedulesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.examSchedules,
+      getReferencedColumn: (t) => t.importBatchId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ExamSchedulesTableFilterComposer(
+            $db: $db,
+            $table: $db.examSchedules,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -5452,6 +6815,31 @@ class $$ImportBatchesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> examSchedulesRefs<T extends Object>(
+    Expression<T> Function($$ExamSchedulesTableAnnotationComposer a) f,
+  ) {
+    final $$ExamSchedulesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.examSchedules,
+      getReferencedColumn: (t) => t.importBatchId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ExamSchedulesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.examSchedules,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ImportBatchesTableTableManager
@@ -5470,6 +6858,7 @@ class $$ImportBatchesTableTableManager
           PrefetchHooks Function({
             bool sourceRecordsRefs,
             bool mergeConflictsRefs,
+            bool examSchedulesRefs,
           })
         > {
   $$ImportBatchesTableTableManager(_$AppDatabase db, $ImportBatchesTable table)
@@ -5520,12 +6909,17 @@ class $$ImportBatchesTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({sourceRecordsRefs = false, mergeConflictsRefs = false}) {
+              ({
+                sourceRecordsRefs = false,
+                mergeConflictsRefs = false,
+                examSchedulesRefs = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (sourceRecordsRefs) db.sourceRecords,
                     if (mergeConflictsRefs) db.mergeConflicts,
+                    if (examSchedulesRefs) db.examSchedules,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -5572,6 +6966,27 @@ class $$ImportBatchesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (examSchedulesRefs)
+                        await $_getPrefetchedData<
+                          ImportBatche,
+                          $ImportBatchesTable,
+                          ExamSchedule
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ImportBatchesTableReferences
+                              ._examSchedulesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ImportBatchesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).examSchedulesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.importBatchId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -5592,7 +7007,11 @@ typedef $$ImportBatchesTableProcessedTableManager =
       $$ImportBatchesTableUpdateCompanionBuilder,
       (ImportBatche, $$ImportBatchesTableReferences),
       ImportBatche,
-      PrefetchHooks Function({bool sourceRecordsRefs, bool mergeConflictsRefs})
+      PrefetchHooks Function({
+        bool sourceRecordsRefs,
+        bool mergeConflictsRefs,
+        bool examSchedulesRefs,
+      })
     >;
 typedef $$SourceRecordsTableCreateCompanionBuilder =
     SourceRecordsCompanion Function({
@@ -5708,6 +7127,27 @@ final class $$SourceRecordsTableReferences
     final cache = $_typedResult.readTableOrNull(
       _incomingMergeConflictsTable($_db),
     );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$ExamSchedulesTable, List<ExamSchedule>>
+  _examSchedulesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.examSchedules,
+    aliasName: $_aliasNameGenerator(
+      db.sourceRecords.id,
+      db.examSchedules.sourceRecordId,
+    ),
+  );
+
+  $$ExamSchedulesTableProcessedTableManager get examSchedulesRefs {
+    final manager = $$ExamSchedulesTableTableManager(
+      $_db,
+      $_db.examSchedules,
+    ).filter((f) => f.sourceRecordId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_examSchedulesRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -5837,6 +7277,31 @@ class $$SourceRecordsTableFilterComposer
           }) => $$MergeConflictsTableFilterComposer(
             $db: $db,
             $table: $db.mergeConflicts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> examSchedulesRefs(
+    Expression<bool> Function($$ExamSchedulesTableFilterComposer f) f,
+  ) {
+    final $$ExamSchedulesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.examSchedules,
+      getReferencedColumn: (t) => t.sourceRecordId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ExamSchedulesTableFilterComposer(
+            $db: $db,
+            $table: $db.examSchedules,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -6032,6 +7497,31 @@ class $$SourceRecordsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> examSchedulesRefs<T extends Object>(
+    Expression<T> Function($$ExamSchedulesTableAnnotationComposer a) f,
+  ) {
+    final $$ExamSchedulesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.examSchedules,
+      getReferencedColumn: (t) => t.sourceRecordId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ExamSchedulesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.examSchedules,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$SourceRecordsTableTableManager
@@ -6052,6 +7542,7 @@ class $$SourceRecordsTableTableManager
             bool coursesRefs,
             bool currentMergeConflicts,
             bool incomingMergeConflicts,
+            bool examSchedulesRefs,
           })
         > {
   $$SourceRecordsTableTableManager(_$AppDatabase db, $SourceRecordsTable table)
@@ -6111,6 +7602,7 @@ class $$SourceRecordsTableTableManager
                 coursesRefs = false,
                 currentMergeConflicts = false,
                 incomingMergeConflicts = false,
+                examSchedulesRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -6118,6 +7610,7 @@ class $$SourceRecordsTableTableManager
                     if (coursesRefs) db.courses,
                     if (currentMergeConflicts) db.mergeConflicts,
                     if (incomingMergeConflicts) db.mergeConflicts,
+                    if (examSchedulesRefs) db.examSchedules,
                   ],
                   addJoins:
                       <
@@ -6218,6 +7711,27 @@ class $$SourceRecordsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (examSchedulesRefs)
+                        await $_getPrefetchedData<
+                          SourceRecord,
+                          $SourceRecordsTable,
+                          ExamSchedule
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SourceRecordsTableReferences
+                              ._examSchedulesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SourceRecordsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).examSchedulesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.sourceRecordId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -6243,6 +7757,7 @@ typedef $$SourceRecordsTableProcessedTableManager =
         bool coursesRefs,
         bool currentMergeConflicts,
         bool incomingMergeConflicts,
+        bool examSchedulesRefs,
       })
     >;
 typedef $$CoursesTableCreateCompanionBuilder =
@@ -6946,6 +8461,8 @@ typedef $$ClassSessionsTableCreateCompanionBuilder =
       required int weekday,
       required int startSection,
       required int endSection,
+      Value<int?> startMinuteOfDay,
+      Value<int?> endMinuteOfDay,
       required int weekStart,
       required int weekEnd,
       Value<String?> weekParity,
@@ -6961,6 +8478,8 @@ typedef $$ClassSessionsTableUpdateCompanionBuilder =
       Value<int> weekday,
       Value<int> startSection,
       Value<int> endSection,
+      Value<int?> startMinuteOfDay,
+      Value<int?> endMinuteOfDay,
       Value<int> weekStart,
       Value<int> weekEnd,
       Value<String?> weekParity,
@@ -7024,6 +8543,16 @@ class $$ClassSessionsTableFilterComposer
 
   ColumnFilters<int> get endSection => $composableBuilder(
     column: $table.endSection,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get startMinuteOfDay => $composableBuilder(
+    column: $table.startMinuteOfDay,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get endMinuteOfDay => $composableBuilder(
+    column: $table.endMinuteOfDay,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7115,6 +8644,16 @@ class $$ClassSessionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get startMinuteOfDay => $composableBuilder(
+    column: $table.startMinuteOfDay,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get endMinuteOfDay => $composableBuilder(
+    column: $table.endMinuteOfDay,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get weekStart => $composableBuilder(
     column: $table.weekStart,
     builder: (column) => ColumnOrderings(column),
@@ -7199,6 +8738,16 @@ class $$ClassSessionsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get startMinuteOfDay => $composableBuilder(
+    column: $table.startMinuteOfDay,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get endMinuteOfDay => $composableBuilder(
+    column: $table.endMinuteOfDay,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get weekStart =>
       $composableBuilder(column: $table.weekStart, builder: (column) => column);
 
@@ -7279,6 +8828,8 @@ class $$ClassSessionsTableTableManager
                 Value<int> weekday = const Value.absent(),
                 Value<int> startSection = const Value.absent(),
                 Value<int> endSection = const Value.absent(),
+                Value<int?> startMinuteOfDay = const Value.absent(),
+                Value<int?> endMinuteOfDay = const Value.absent(),
                 Value<int> weekStart = const Value.absent(),
                 Value<int> weekEnd = const Value.absent(),
                 Value<String?> weekParity = const Value.absent(),
@@ -7292,6 +8843,8 @@ class $$ClassSessionsTableTableManager
                 weekday: weekday,
                 startSection: startSection,
                 endSection: endSection,
+                startMinuteOfDay: startMinuteOfDay,
+                endMinuteOfDay: endMinuteOfDay,
                 weekStart: weekStart,
                 weekEnd: weekEnd,
                 weekParity: weekParity,
@@ -7307,6 +8860,8 @@ class $$ClassSessionsTableTableManager
                 required int weekday,
                 required int startSection,
                 required int endSection,
+                Value<int?> startMinuteOfDay = const Value.absent(),
+                Value<int?> endMinuteOfDay = const Value.absent(),
                 required int weekStart,
                 required int weekEnd,
                 Value<String?> weekParity = const Value.absent(),
@@ -7320,6 +8875,8 @@ class $$ClassSessionsTableTableManager
                 weekday: weekday,
                 startSection: startSection,
                 endSection: endSection,
+                startMinuteOfDay: startMinuteOfDay,
+                endMinuteOfDay: endMinuteOfDay,
                 weekStart: weekStart,
                 weekEnd: weekEnd,
                 weekParity: weekParity,
@@ -8118,6 +9675,9 @@ typedef $$ReminderRulesTableCreateCompanionBuilder =
       Value<int?> planId,
       Value<int?> courseId,
       Value<int> minutesBefore,
+      Value<String?> reminderOffsetsJson,
+      Value<bool> ignoreDnd,
+      Value<bool> vibrateOnly,
       Value<bool> enabled,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
@@ -8128,6 +9688,9 @@ typedef $$ReminderRulesTableUpdateCompanionBuilder =
       Value<int?> planId,
       Value<int?> courseId,
       Value<int> minutesBefore,
+      Value<String?> reminderOffsetsJson,
+      Value<bool> ignoreDnd,
+      Value<bool> vibrateOnly,
       Value<bool> enabled,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
@@ -8196,6 +9759,21 @@ class $$ReminderRulesTableFilterComposer
 
   ColumnFilters<int> get minutesBefore => $composableBuilder(
     column: $table.minutesBefore,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reminderOffsetsJson => $composableBuilder(
+    column: $table.reminderOffsetsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get ignoreDnd => $composableBuilder(
+    column: $table.ignoreDnd,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get vibrateOnly => $composableBuilder(
+    column: $table.vibrateOnly,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8280,6 +9858,21 @@ class $$ReminderRulesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get reminderOffsetsJson => $composableBuilder(
+    column: $table.reminderOffsetsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get ignoreDnd => $composableBuilder(
+    column: $table.ignoreDnd,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get vibrateOnly => $composableBuilder(
+    column: $table.vibrateOnly,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get enabled => $composableBuilder(
     column: $table.enabled,
     builder: (column) => ColumnOrderings(column),
@@ -8356,6 +9949,19 @@ class $$ReminderRulesTableAnnotationComposer
 
   GeneratedColumn<int> get minutesBefore => $composableBuilder(
     column: $table.minutesBefore,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get reminderOffsetsJson => $composableBuilder(
+    column: $table.reminderOffsetsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get ignoreDnd =>
+      $composableBuilder(column: $table.ignoreDnd, builder: (column) => column);
+
+  GeneratedColumn<bool> get vibrateOnly => $composableBuilder(
+    column: $table.vibrateOnly,
     builder: (column) => column,
   );
 
@@ -8447,6 +10053,9 @@ class $$ReminderRulesTableTableManager
                 Value<int?> planId = const Value.absent(),
                 Value<int?> courseId = const Value.absent(),
                 Value<int> minutesBefore = const Value.absent(),
+                Value<String?> reminderOffsetsJson = const Value.absent(),
+                Value<bool> ignoreDnd = const Value.absent(),
+                Value<bool> vibrateOnly = const Value.absent(),
                 Value<bool> enabled = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -8455,6 +10064,9 @@ class $$ReminderRulesTableTableManager
                 planId: planId,
                 courseId: courseId,
                 minutesBefore: minutesBefore,
+                reminderOffsetsJson: reminderOffsetsJson,
+                ignoreDnd: ignoreDnd,
+                vibrateOnly: vibrateOnly,
                 enabled: enabled,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -8465,6 +10077,9 @@ class $$ReminderRulesTableTableManager
                 Value<int?> planId = const Value.absent(),
                 Value<int?> courseId = const Value.absent(),
                 Value<int> minutesBefore = const Value.absent(),
+                Value<String?> reminderOffsetsJson = const Value.absent(),
+                Value<bool> ignoreDnd = const Value.absent(),
+                Value<bool> vibrateOnly = const Value.absent(),
                 Value<bool> enabled = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -8473,6 +10088,9 @@ class $$ReminderRulesTableTableManager
                 planId: planId,
                 courseId: courseId,
                 minutesBefore: minutesBefore,
+                reminderOffsetsJson: reminderOffsetsJson,
+                ignoreDnd: ignoreDnd,
+                vibrateOnly: vibrateOnly,
                 enabled: enabled,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -8557,6 +10175,679 @@ typedef $$ReminderRulesTableProcessedTableManager =
       ReminderRule,
       PrefetchHooks Function({bool planId, bool courseId})
     >;
+typedef $$ExamSchedulesTableCreateCompanionBuilder =
+    ExamSchedulesCompanion Function({
+      Value<int> id,
+      Value<int?> importBatchId,
+      Value<int?> sourceRecordId,
+      required String examRound,
+      Value<String?> courseCode,
+      required String courseName,
+      Value<double?> credits,
+      Value<String?> category,
+      Value<String?> assessmentMethod,
+      required DateTime startAt,
+      required DateTime endAt,
+      required int semesterWeek,
+      required int weekday,
+      Value<String?> location,
+      Value<String?> seatNumber,
+      Value<String?> rawText,
+      Value<bool> isHidden,
+      Value<DateTime> createdAt,
+    });
+typedef $$ExamSchedulesTableUpdateCompanionBuilder =
+    ExamSchedulesCompanion Function({
+      Value<int> id,
+      Value<int?> importBatchId,
+      Value<int?> sourceRecordId,
+      Value<String> examRound,
+      Value<String?> courseCode,
+      Value<String> courseName,
+      Value<double?> credits,
+      Value<String?> category,
+      Value<String?> assessmentMethod,
+      Value<DateTime> startAt,
+      Value<DateTime> endAt,
+      Value<int> semesterWeek,
+      Value<int> weekday,
+      Value<String?> location,
+      Value<String?> seatNumber,
+      Value<String?> rawText,
+      Value<bool> isHidden,
+      Value<DateTime> createdAt,
+    });
+
+final class $$ExamSchedulesTableReferences
+    extends BaseReferences<_$AppDatabase, $ExamSchedulesTable, ExamSchedule> {
+  $$ExamSchedulesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ImportBatchesTable _importBatchIdTable(_$AppDatabase db) =>
+      db.importBatches.createAlias(
+        $_aliasNameGenerator(
+          db.examSchedules.importBatchId,
+          db.importBatches.id,
+        ),
+      );
+
+  $$ImportBatchesTableProcessedTableManager? get importBatchId {
+    final $_column = $_itemColumn<int>('import_batch_id');
+    if ($_column == null) return null;
+    final manager = $$ImportBatchesTableTableManager(
+      $_db,
+      $_db.importBatches,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_importBatchIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $SourceRecordsTable _sourceRecordIdTable(_$AppDatabase db) =>
+      db.sourceRecords.createAlias(
+        $_aliasNameGenerator(
+          db.examSchedules.sourceRecordId,
+          db.sourceRecords.id,
+        ),
+      );
+
+  $$SourceRecordsTableProcessedTableManager? get sourceRecordId {
+    final $_column = $_itemColumn<int>('source_record_id');
+    if ($_column == null) return null;
+    final manager = $$SourceRecordsTableTableManager(
+      $_db,
+      $_db.sourceRecords,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sourceRecordIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ExamSchedulesTableFilterComposer
+    extends Composer<_$AppDatabase, $ExamSchedulesTable> {
+  $$ExamSchedulesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get examRound => $composableBuilder(
+    column: $table.examRound,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get courseCode => $composableBuilder(
+    column: $table.courseCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get courseName => $composableBuilder(
+    column: $table.courseName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get credits => $composableBuilder(
+    column: $table.credits,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get assessmentMethod => $composableBuilder(
+    column: $table.assessmentMethod,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get startAt => $composableBuilder(
+    column: $table.startAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get endAt => $composableBuilder(
+    column: $table.endAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get semesterWeek => $composableBuilder(
+    column: $table.semesterWeek,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get weekday => $composableBuilder(
+    column: $table.weekday,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get location => $composableBuilder(
+    column: $table.location,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get seatNumber => $composableBuilder(
+    column: $table.seatNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rawText => $composableBuilder(
+    column: $table.rawText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isHidden => $composableBuilder(
+    column: $table.isHidden,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ImportBatchesTableFilterComposer get importBatchId {
+    final $$ImportBatchesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.importBatchId,
+      referencedTable: $db.importBatches,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ImportBatchesTableFilterComposer(
+            $db: $db,
+            $table: $db.importBatches,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$SourceRecordsTableFilterComposer get sourceRecordId {
+    final $$SourceRecordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceRecordId,
+      referencedTable: $db.sourceRecords,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourceRecordsTableFilterComposer(
+            $db: $db,
+            $table: $db.sourceRecords,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ExamSchedulesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ExamSchedulesTable> {
+  $$ExamSchedulesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get examRound => $composableBuilder(
+    column: $table.examRound,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get courseCode => $composableBuilder(
+    column: $table.courseCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get courseName => $composableBuilder(
+    column: $table.courseName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get credits => $composableBuilder(
+    column: $table.credits,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get assessmentMethod => $composableBuilder(
+    column: $table.assessmentMethod,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get startAt => $composableBuilder(
+    column: $table.startAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get endAt => $composableBuilder(
+    column: $table.endAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get semesterWeek => $composableBuilder(
+    column: $table.semesterWeek,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get weekday => $composableBuilder(
+    column: $table.weekday,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get location => $composableBuilder(
+    column: $table.location,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get seatNumber => $composableBuilder(
+    column: $table.seatNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rawText => $composableBuilder(
+    column: $table.rawText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isHidden => $composableBuilder(
+    column: $table.isHidden,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ImportBatchesTableOrderingComposer get importBatchId {
+    final $$ImportBatchesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.importBatchId,
+      referencedTable: $db.importBatches,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ImportBatchesTableOrderingComposer(
+            $db: $db,
+            $table: $db.importBatches,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$SourceRecordsTableOrderingComposer get sourceRecordId {
+    final $$SourceRecordsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceRecordId,
+      referencedTable: $db.sourceRecords,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourceRecordsTableOrderingComposer(
+            $db: $db,
+            $table: $db.sourceRecords,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ExamSchedulesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ExamSchedulesTable> {
+  $$ExamSchedulesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get examRound =>
+      $composableBuilder(column: $table.examRound, builder: (column) => column);
+
+  GeneratedColumn<String> get courseCode => $composableBuilder(
+    column: $table.courseCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get courseName => $composableBuilder(
+    column: $table.courseName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get credits =>
+      $composableBuilder(column: $table.credits, builder: (column) => column);
+
+  GeneratedColumn<String> get category =>
+      $composableBuilder(column: $table.category, builder: (column) => column);
+
+  GeneratedColumn<String> get assessmentMethod => $composableBuilder(
+    column: $table.assessmentMethod,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get startAt =>
+      $composableBuilder(column: $table.startAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get endAt =>
+      $composableBuilder(column: $table.endAt, builder: (column) => column);
+
+  GeneratedColumn<int> get semesterWeek => $composableBuilder(
+    column: $table.semesterWeek,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get weekday =>
+      $composableBuilder(column: $table.weekday, builder: (column) => column);
+
+  GeneratedColumn<String> get location =>
+      $composableBuilder(column: $table.location, builder: (column) => column);
+
+  GeneratedColumn<String> get seatNumber => $composableBuilder(
+    column: $table.seatNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get rawText =>
+      $composableBuilder(column: $table.rawText, builder: (column) => column);
+
+  GeneratedColumn<bool> get isHidden =>
+      $composableBuilder(column: $table.isHidden, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$ImportBatchesTableAnnotationComposer get importBatchId {
+    final $$ImportBatchesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.importBatchId,
+      referencedTable: $db.importBatches,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ImportBatchesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.importBatches,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$SourceRecordsTableAnnotationComposer get sourceRecordId {
+    final $$SourceRecordsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceRecordId,
+      referencedTable: $db.sourceRecords,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SourceRecordsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.sourceRecords,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ExamSchedulesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ExamSchedulesTable,
+          ExamSchedule,
+          $$ExamSchedulesTableFilterComposer,
+          $$ExamSchedulesTableOrderingComposer,
+          $$ExamSchedulesTableAnnotationComposer,
+          $$ExamSchedulesTableCreateCompanionBuilder,
+          $$ExamSchedulesTableUpdateCompanionBuilder,
+          (ExamSchedule, $$ExamSchedulesTableReferences),
+          ExamSchedule,
+          PrefetchHooks Function({bool importBatchId, bool sourceRecordId})
+        > {
+  $$ExamSchedulesTableTableManager(_$AppDatabase db, $ExamSchedulesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ExamSchedulesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ExamSchedulesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ExamSchedulesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> importBatchId = const Value.absent(),
+                Value<int?> sourceRecordId = const Value.absent(),
+                Value<String> examRound = const Value.absent(),
+                Value<String?> courseCode = const Value.absent(),
+                Value<String> courseName = const Value.absent(),
+                Value<double?> credits = const Value.absent(),
+                Value<String?> category = const Value.absent(),
+                Value<String?> assessmentMethod = const Value.absent(),
+                Value<DateTime> startAt = const Value.absent(),
+                Value<DateTime> endAt = const Value.absent(),
+                Value<int> semesterWeek = const Value.absent(),
+                Value<int> weekday = const Value.absent(),
+                Value<String?> location = const Value.absent(),
+                Value<String?> seatNumber = const Value.absent(),
+                Value<String?> rawText = const Value.absent(),
+                Value<bool> isHidden = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => ExamSchedulesCompanion(
+                id: id,
+                importBatchId: importBatchId,
+                sourceRecordId: sourceRecordId,
+                examRound: examRound,
+                courseCode: courseCode,
+                courseName: courseName,
+                credits: credits,
+                category: category,
+                assessmentMethod: assessmentMethod,
+                startAt: startAt,
+                endAt: endAt,
+                semesterWeek: semesterWeek,
+                weekday: weekday,
+                location: location,
+                seatNumber: seatNumber,
+                rawText: rawText,
+                isHidden: isHidden,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> importBatchId = const Value.absent(),
+                Value<int?> sourceRecordId = const Value.absent(),
+                required String examRound,
+                Value<String?> courseCode = const Value.absent(),
+                required String courseName,
+                Value<double?> credits = const Value.absent(),
+                Value<String?> category = const Value.absent(),
+                Value<String?> assessmentMethod = const Value.absent(),
+                required DateTime startAt,
+                required DateTime endAt,
+                required int semesterWeek,
+                required int weekday,
+                Value<String?> location = const Value.absent(),
+                Value<String?> seatNumber = const Value.absent(),
+                Value<String?> rawText = const Value.absent(),
+                Value<bool> isHidden = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => ExamSchedulesCompanion.insert(
+                id: id,
+                importBatchId: importBatchId,
+                sourceRecordId: sourceRecordId,
+                examRound: examRound,
+                courseCode: courseCode,
+                courseName: courseName,
+                credits: credits,
+                category: category,
+                assessmentMethod: assessmentMethod,
+                startAt: startAt,
+                endAt: endAt,
+                semesterWeek: semesterWeek,
+                weekday: weekday,
+                location: location,
+                seatNumber: seatNumber,
+                rawText: rawText,
+                isHidden: isHidden,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$ExamSchedulesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({importBatchId = false, sourceRecordId = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (importBatchId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.importBatchId,
+                                    referencedTable:
+                                        $$ExamSchedulesTableReferences
+                                            ._importBatchIdTable(db),
+                                    referencedColumn:
+                                        $$ExamSchedulesTableReferences
+                                            ._importBatchIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (sourceRecordId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.sourceRecordId,
+                                    referencedTable:
+                                        $$ExamSchedulesTableReferences
+                                            ._sourceRecordIdTable(db),
+                                    referencedColumn:
+                                        $$ExamSchedulesTableReferences
+                                            ._sourceRecordIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$ExamSchedulesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ExamSchedulesTable,
+      ExamSchedule,
+      $$ExamSchedulesTableFilterComposer,
+      $$ExamSchedulesTableOrderingComposer,
+      $$ExamSchedulesTableAnnotationComposer,
+      $$ExamSchedulesTableCreateCompanionBuilder,
+      $$ExamSchedulesTableUpdateCompanionBuilder,
+      (ExamSchedule, $$ExamSchedulesTableReferences),
+      ExamSchedule,
+      PrefetchHooks Function({bool importBatchId, bool sourceRecordId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -8577,4 +10868,6 @@ class $AppDatabaseManager {
       $$MergeConflictsTableTableManager(_db, _db.mergeConflicts);
   $$ReminderRulesTableTableManager get reminderRules =>
       $$ReminderRulesTableTableManager(_db, _db.reminderRules);
+  $$ExamSchedulesTableTableManager get examSchedules =>
+      $$ExamSchedulesTableTableManager(_db, _db.examSchedules);
 }

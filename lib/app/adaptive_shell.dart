@@ -32,16 +32,16 @@ const appDestinations = [
 
 const _topBarActionExtent = 48.0;
 
-class AdaptiveShell extends StatefulWidget {
+class AdaptiveShell extends ConsumerStatefulWidget {
   const AdaptiveShell({super.key, required this.child});
 
   final Widget child;
 
   @override
-  State<AdaptiveShell> createState() => _AdaptiveShellState();
+  ConsumerState<AdaptiveShell> createState() => _AdaptiveShellState();
 }
 
-class _AdaptiveShellState extends State<AdaptiveShell> {
+class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
   var _railCollapsed = false;
 
   @override
@@ -60,6 +60,7 @@ class _AdaptiveShellState extends State<AdaptiveShell> {
             _isCoreLocation(uri.path) &&
             uri.path != '/timetable') {
           context.go('/timetable');
+          _requestTimetableAutoScrollAfterNavigation();
           return true;
         }
         return false;
@@ -70,7 +71,12 @@ class _AdaptiveShellState extends State<AdaptiveShell> {
           if (didPop) {
             return;
           }
-          _handleBlockedSystemBack(context, uri);
+          _handleBlockedSystemBack(
+            context,
+            uri,
+            requestTimetableAutoScroll:
+                _requestTimetableAutoScrollAfterNavigation,
+          );
         },
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -212,6 +218,9 @@ class _AdaptiveShellState extends State<AdaptiveShell> {
 
   void _selectDestination(BuildContext context, Uri currentUri, int index) {
     final target = appDestinations[index].path;
+    if (target == '/timetable') {
+      _requestTimetableAutoScrollAfterNavigation();
+    }
     if (currentUri.path == target) {
       return;
     }
@@ -237,6 +246,15 @@ class _AdaptiveShellState extends State<AdaptiveShell> {
       return;
     }
     context.push(target);
+  }
+
+  void _requestTimetableAutoScrollAfterNavigation() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      ref.read(timetableAutoScrollRequestProvider.notifier).request();
+    });
   }
 
   void _navigateBetweenCoreDestinations(BuildContext context, String target) {
@@ -805,9 +823,14 @@ bool _canPopWithSystem(BuildContext context, Uri currentUri) {
   return currentUri.path == '/timetable';
 }
 
-void _handleBlockedSystemBack(BuildContext context, Uri currentUri) {
+void _handleBlockedSystemBack(
+  BuildContext context,
+  Uri currentUri, {
+  required VoidCallback requestTimetableAutoScroll,
+}) {
   if (_isCoreLocation(currentUri.path) && currentUri.path != '/timetable') {
     context.go('/timetable');
+    requestTimetableAutoScroll();
     return;
   }
   _returnToSource(context, currentUri);

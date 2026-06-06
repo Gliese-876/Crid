@@ -22,37 +22,38 @@ There are already many mature timetable apps. However, many of them are closed s
 - Course reminders
 - Automatic make-up workday adjustment
 - Import `.xls` timetables from academic systems
+- Import `.mht`, `.mhtml`, and `.pdf` exam schedules from academic systems
+- Import exam schedules by pasting text copied from academic systems
 - Export timetables as `.ics` and `.png` files
+- Local backup and restore for data and settings
 - Multi-language support
 - More features are still in development
 
 ## Installation
 
-Release builds are published on [GitHub Releases](https://github.com/Gliese-876/Crid/releases). The first official release is `v1.0.0-release`.
+Release builds are published on [GitHub Releases](https://github.com/Gliese-876/Crid/releases). The latest official release is `v1.1.0-release`.
 
 ### Android
 
-Download `Crid-1.0.0-release-android.apk` and install it directly. If Android blocks installation from unknown sources, enable the "Install unknown apps" permission for your browser or file manager.
+Download `Crid-1.1.0-release-android.apk` and install it directly. If Android blocks installation from unknown sources, enable the "Install unknown apps" permission for your browser or file manager.
 
 You can also download a smaller APK for your device architecture:
 
-- `Crid-1.0.0-release-android-arm64.apk`: most recent Android phones
-- `Crid-1.0.0-release-android-armeabi-v7a.apk`: older 32-bit Android devices
-- `Crid-1.0.0-release-android-x86_64.apk`: x86_64 emulators or a small number of x86_64 devices
-
-`Crid-1.0.0-release-android.aab` is mainly for app store distribution. Most users do not need it.
+- `Crid-1.1.0-release-android-arm64.apk`: most recent Android phones
+- `Crid-1.1.0-release-android-armeabi-v7a.apk`: older 32-bit Android devices
+- `Crid-1.1.0-release-android-x86_64.apk`: x86_64 emulators or a small number of x86_64 devices
 
 ### Windows
 
 Download both files:
 
-- `Crid-1.0.0-release-windows.msix`
-- `Crid-1.0.0-release-windows.cer`
+- `Crid-1.1.0-release-windows.msix`
+- `Crid-1.1.0-release-windows.cer`
 
 The Windows package currently uses a self-signed certificate, so Windows must trust the bundled certificate before installation. The recommended way is to run these commands in an administrator PowerShell:
 
 ```powershell
-$certPath = "C:\path\to\Crid-1.0.0-release-windows.cer"
+$certPath = "C:\path\to\Crid-1.1.0-release-windows.cer"
 
 Import-Certificate -FilePath $certPath -CertStoreLocation Cert:\LocalMachine\TrustedPeople
 Import-Certificate -FilePath $certPath -CertStoreLocation Cert:\LocalMachine\Root
@@ -61,7 +62,7 @@ Import-Certificate -FilePath $certPath -CertStoreLocation Cert:\LocalMachine\Roo
 Then double-click the `.msix` file, or install it from the same administrator PowerShell:
 
 ```powershell
-Add-AppxPackage -Path "C:\path\to\Crid-1.0.0-release-windows.msix"
+Add-AppxPackage -Path "C:\path\to\Crid-1.1.0-release-windows.msix"
 ```
 
 If App Installer reports `0x800B0109`, the certificate was probably imported only for the current user instead of the local machine trusted certificate stores.
@@ -91,13 +92,13 @@ Core dependencies:
 - Drift and SQLite
 - file_picker
 - flutter_local_notifications
-- html, charset, spreadsheet_decoder
+- html, charset, spreadsheet_decoder, mime, syncfusion_flutter_pdf
 - icalendar_parser, rrule, timezone
 - material_color_utilities
 
 ## Known Issues
 
-- Only timetable files from Beijing Normal University Zhuhai campus are supported
+- Timetable and exam schedule parsing is currently focused on Beijing Normal University Zhuhai campus files
 - The notification system may be unstable
 - The Windows version is still immature and differs noticeably from the Android version in interface and functionality
 

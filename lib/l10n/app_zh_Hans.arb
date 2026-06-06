@@ -137,8 +137,8 @@
   "location": "地点",
   "notes": "备注",
   "weekday": "星期",
-  "startPeriod": "开始节次",
-  "endPeriod": "结束节次",
+  "startPeriod": "开始时间",
+  "endPeriod": "结束时间",
   "startWeek": "开始周",
   "endWeek": "结束周",
   "allWeeks": "全部",
@@ -146,7 +146,8 @@
   "evenWeeks": "双周",
   "requiredField": "必填",
   "weekNumberValidation": "请输入 1-30",
-  "courseSaved": "已保存 {course}：星期 {weekday}，第 {start}-{end} 节。",
+  "timeValidation": "请使用 HH:mm，且结束时间晚于开始时间。",
+  "courseSaved": "已保存 {course}：星期 {weekday}，{start}-{end}。",
   "@courseSaved": {
     "placeholders": {
       "course": {
@@ -156,10 +157,10 @@
         "type": "int"
       },
       "start": {
-        "type": "int"
+        "type": "String"
       },
       "end": {
-        "type": "int"
+        "type": "String"
       }
     }
   },
@@ -169,6 +170,9 @@
   "importCenter": "导入中心",
   "importCenterSubtitle": "支持教务系统导出的课表文件，也可以导入日历文件。",
   "chooseFile": "选择文件",
+  "pasteExamSchedule": "粘贴考试安排",
+  "pasteExamScheduleHint": "粘贴教务系统考试安排表中的文本。",
+  "importExamSchedule": "导入考试安排",
   "loadSample": "加载样例",
   "openDiff": "查看需确认课程",
   "stagingPreview": "导入预览",
@@ -185,6 +189,22 @@
   },
   "newCount": "{count} 条新增",
   "@newCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "skippedCount": "{count} 条跳过",
+  "@skippedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "examParsedCount": "{count} 条考试安排",
+  "@examParsedCount": {
     "placeholders": {
       "count": {
         "type": "int"
@@ -231,6 +251,17 @@
       }
     }
   },
+  "examImportCommittedSummary": "已导入 {added} 条考试安排，跳过 {skipped} 条重复记录。",
+  "@examImportCommittedSummary": {
+    "placeholders": {
+      "added": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
   "importWarningUnsupportedFileType": "暂不支持这个文件类型，请选择课表表格或日历文件。",
   "importWarningWorkbookReadFailed": "无法读取这个 .xls 文件，请确认文件没有损坏。",
   "importWarningNoCompleteXlsRows": "已识别为课表文件，但没有找到完整课程。",
@@ -258,6 +289,9 @@
   "course": "课程",
   "time": "时间",
   "weeks": "周次",
+  "examRound": "考试轮次",
+  "examTime": "考试时间",
+  "seatNumber": "座位号",
   "recentBatches": "最近导入",
   "failedToLoadHistory": "导入历史加载失败：{error}",
   "@failedToLoadHistory": {
@@ -434,9 +468,30 @@
   "denseTimetableSubtitle": "第一版已为自适应界面启用紧凑行距。",
   "localData": "本地数据",
   "localDataSubtitle": "课表、导入记录和提醒设置只保存在本机。",
+  "backupLocalData": "备份到本地",
+  "restoreLocalData": "从备份恢复",
+  "backupCreated": "备份已保存到 {path}",
+  "@backupCreated": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "backupRestored": "数据和设置已恢复。",
+  "localDataActionFailed": "本地数据操作失败：{error}",
+  "@localDataActionFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
   "offlineAppSubtitle": "无需登录；课表和提醒都在本机处理。",
-  "thirdPartyLicenses": "第三方开源许可",
-  "thirdPartyLicensesSubtitle": "查看 Flutter 和依赖库的开源许可。",
+  "thirdPartyLicenses": "开放源代码许可",
+  "thirdPartyLicensesSubtitle": "查看课格、Flutter 和依赖库的开放源代码许可。",
+  "appLicenseDisplayName": "课格（Crid）",
+  "appLicenseSummary": "课格（Crid）采用 Apache License 2.0 开放源代码许可；分发时请保留 LICENSE 和 NOTICE 中的归属声明。",
   "reminders": "课程提醒",
   "reminderNotificationTitle": "{minutes} 分钟后上课",
   "@reminderNotificationTitle": {
@@ -491,6 +546,13 @@
       }
     }
   },
+  "customReminderTime": "自定义时间",
+  "minutesBeforeClass": "上课前",
+  "minutesUnit": "分钟",
+  "ignoreDoNotDisturb": "忽略免打扰",
+  "ignoreDoNotDisturbSubtitle": "Android 会打开系统授权页；授权后提醒渠道可绕过免打扰。",
+  "vibrateReminder": "关闭提醒声音",
+  "vibrateReminderSubtitle": "课程提醒仍会振动，但不播放提示音。",
   "goToToday": "回到今天",
   "delete": "删除",
   "save": "保存",

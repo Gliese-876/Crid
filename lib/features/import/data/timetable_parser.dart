@@ -50,6 +50,9 @@ class TimetableImportParser {
         bytes: bytes,
         semesterFirstWeekMonday: semesterFirstWeekMonday,
       ),
+      ImportFileType.mhtml ||
+      ImportFileType.pdf ||
+      ImportFileType.plainText ||
       ImportFileType.unknown => Future.value(
         ParsedTimetable(
           sourceName: sourceName,

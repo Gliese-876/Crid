@@ -1,3 +1,5 @@
+import '../../core/time/period.dart' as core_time;
+
 enum WeekParity {
   all,
   odd,
@@ -24,80 +26,9 @@ enum WeekParity {
   }
 }
 
-class LessonSlot {
-  const LessonSlot({
-    required this.section,
-    required this.start,
-    required this.end,
-  });
+typedef LessonSlot = core_time.LessonTimeSlot;
 
-  final int section;
-  final ({int hour, int minute}) start;
-  final ({int hour, int minute}) end;
-}
-
-const defaultBnuzLessonSlots = <LessonSlot>[
-  LessonSlot(
-    section: 1,
-    start: (hour: 8, minute: 0),
-    end: (hour: 8, minute: 45),
-  ),
-  LessonSlot(
-    section: 2,
-    start: (hour: 8, minute: 55),
-    end: (hour: 9, minute: 40),
-  ),
-  LessonSlot(
-    section: 3,
-    start: (hour: 10, minute: 0),
-    end: (hour: 10, minute: 45),
-  ),
-  LessonSlot(
-    section: 4,
-    start: (hour: 10, minute: 55),
-    end: (hour: 11, minute: 40),
-  ),
-  LessonSlot(
-    section: 5,
-    start: (hour: 13, minute: 30),
-    end: (hour: 14, minute: 15),
-  ),
-  LessonSlot(
-    section: 6,
-    start: (hour: 14, minute: 25),
-    end: (hour: 15, minute: 10),
-  ),
-  LessonSlot(
-    section: 7,
-    start: (hour: 15, minute: 30),
-    end: (hour: 16, minute: 15),
-  ),
-  LessonSlot(
-    section: 8,
-    start: (hour: 16, minute: 25),
-    end: (hour: 17, minute: 10),
-  ),
-  LessonSlot(
-    section: 9,
-    start: (hour: 18, minute: 0),
-    end: (hour: 18, minute: 45),
-  ),
-  LessonSlot(
-    section: 10,
-    start: (hour: 18, minute: 55),
-    end: (hour: 19, minute: 40),
-  ),
-  LessonSlot(
-    section: 11,
-    start: (hour: 19, minute: 50),
-    end: (hour: 20, minute: 35),
-  ),
-  LessonSlot(
-    section: 12,
-    start: (hour: 20, minute: 45),
-    end: (hour: 21, minute: 30),
-  ),
-];
+const defaultBnuzLessonSlots = core_time.defaultLessonTimeSlots;
 
 class ClassSessionInfo {
   const ClassSessionInfo({
@@ -109,6 +40,8 @@ class ClassSessionInfo {
     required this.endSection,
     required this.weekStart,
     required this.weekEnd,
+    this.startMinuteOfDay,
+    this.endMinuteOfDay,
     this.teacher,
     this.location,
     this.note,
@@ -128,6 +61,8 @@ class ClassSessionInfo {
   final int weekday;
   final int startSection;
   final int endSection;
+  final int? startMinuteOfDay;
+  final int? endMinuteOfDay;
   final int weekStart;
   final int weekEnd;
   final WeekParity weekParity;
@@ -152,22 +87,18 @@ Iterable<ClassSessionOccurrence> expandClassSessionOccurrences({
   required DateTime firstWeekMonday,
   Iterable<LessonSlot> lessonSlots = defaultBnuzLessonSlots,
 }) sync* {
-  final startSlot = lessonSlots.firstWhere(
-    (slot) => slot.section == session.startSection,
-    orElse: () => throw ArgumentError.value(
-      session.startSection,
-      'session.startSection',
-      'No lesson slot exists for this section.',
-    ),
-  );
-  final endSlot = lessonSlots.firstWhere(
-    (slot) => slot.section == session.endSection,
-    orElse: () => throw ArgumentError.value(
-      session.endSection,
-      'session.endSection',
-      'No lesson slot exists for this section.',
-    ),
-  );
+  final range =
+      session.startMinuteOfDay != null && session.endMinuteOfDay != null
+      ? core_time.CourseTimeRange.fromClockTimes(
+          startMinuteOfDay: session.startMinuteOfDay!,
+          endMinuteOfDay: session.endMinuteOfDay!,
+          lessonSlots: lessonSlots,
+        )
+      : core_time.CourseTimeRange.fromPeriods(
+          session.startSection,
+          session.endSection,
+          lessonSlots: lessonSlots,
+        );
 
   for (var week = session.weekStart; week <= session.weekEnd; week++) {
     if (!session.weekParity.includes(week)) {
@@ -186,15 +117,15 @@ Iterable<ClassSessionOccurrence> expandClassSessionOccurrences({
         date.year,
         date.month,
         date.day,
-        startSlot.start.hour,
-        startSlot.start.minute,
+        range.startMinuteOfDay ~/ 60,
+        range.startMinuteOfDay % 60,
       ),
       end: DateTime(
         date.year,
         date.month,
         date.day,
-        endSlot.end.hour,
-        endSlot.end.minute,
+        range.endMinuteOfDay ~/ 60,
+        range.endMinuteOfDay % 60,
       ),
     );
   }

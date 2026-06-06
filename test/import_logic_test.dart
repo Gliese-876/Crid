@@ -4,8 +4,10 @@ import 'dart:io';
 import 'package:crid/core/file/import_file_type_detector.dart';
 import 'package:crid/core/time/period.dart';
 import 'package:crid/core/time/week_pattern.dart';
+import 'package:crid/features/import/data/kingosoft_exam_parser.dart';
 import 'package:crid/features/import/data/timetable_parser.dart';
 import 'package:crid/features/import/domain/merge_engine.dart';
+import 'package:crid/features/import/domain/parsed_exam_schedule.dart';
 import 'package:crid/features/import/domain/parsed_timetable.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -34,6 +36,24 @@ void main() {
           bytes: [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1],
         ),
         ImportFileType.biffXls,
+      );
+      expect(
+        detector.detect(
+          fileName: 'exam.mhtml',
+          bytes: ascii.encode('MIME-Version: 1.0'),
+        ),
+        ImportFileType.mhtml,
+      );
+      expect(
+        detector.detect(
+          fileName: 'exam.pdf',
+          bytes: [0x25, 0x50, 0x44, 0x46, 0x2D],
+        ),
+        ImportFileType.pdf,
+      );
+      expect(
+        detector.detect(fileName: 'exam.txt', bytes: utf8.encode('随堂考轮次')),
+        ImportFileType.plainText,
       );
     });
   });
@@ -87,6 +107,17 @@ void main() {
         const PeriodRange(1, 2),
       );
     });
+
+    test('keeps exact clock range while mapping to nearby periods', () {
+      final range = CourseTimeRange.fromClockTimes(
+        startMinuteOfDay: 10 * 60 + 20,
+        endMinuteOfDay: 12 * 60 + 20,
+      );
+
+      expect(range.period, const PeriodRange(3, 4));
+      expect(range.startMinuteOfDay, 10 * 60 + 20);
+      expect(range.endMinuteOfDay, 12 * 60 + 20);
+    });
   });
 
   group('TimetableImportParser', () {
@@ -126,6 +157,8 @@ END:VCALENDAR
       expect(course.location, '示例楼A101');
       expect(course.weekday, DateTime.tuesday);
       expect(course.period, const PeriodRange(1, 2));
+      expect(course.timeRange.startMinuteOfDay, 8 * 60);
+      expect(course.timeRange.endMinuteOfDay, 9 * 60 + 40);
       expect(course.weeks.weeks, [1, 2, 3]);
     });
 
@@ -203,6 +236,37 @@ END:VCALENDAR
         ),
         isNotEmpty,
       );
+    });
+  });
+
+  group('KingosoftExamParser', () {
+    test('parses pasted KINGOSOFT exam schedule text', () async {
+      final parsed = await _parseExamFixture('粘贴文本.txt');
+
+      _expectKingosoftExamSchedule(parsed);
+      expect(parsed.fileType, ImportFileType.plainText);
+    });
+
+    test('parses KINGOSOFT MHTML exam schedule exports', () async {
+      final mhtml = await _parseExamFixture('KINGOSOFT高校教学综合管理服务平台.mhtml');
+      final mht = await _parseExamFixture('KINGOSOFT高校教学综合管理服务平台.mht');
+
+      _expectKingosoftExamSchedule(mhtml);
+      _expectKingosoftExamSchedule(mht);
+      expect(mhtml.fileType, ImportFileType.mhtml);
+      expect(mht.fileType, ImportFileType.mhtml);
+    });
+
+    test('parses KINGOSOFT PDF exam schedule export', () async {
+      final parsed = await _parseExamFixture('KINGOSOFT高校教学综合管理服务平台.pdf');
+
+      _expectKingosoftExamSchedule(
+        parsed,
+        expectedCount: 10,
+        expectedSeatNumber: '',
+        expectedCourseNames: ['数学分析Ⅱ', '代数学基础Ⅱ'],
+      );
+      expect(parsed.fileType, ImportFileType.pdf);
     });
   });
 
@@ -294,4 +358,35 @@ END:VCALENDAR
       },
     );
   });
+}
+
+Future<ParsedExamSchedule> _parseExamFixture(String name) async {
+  final file = File('test/$name');
+  return const KingosoftExamParser().parse(
+    sourceName: file.path,
+    bytes: await file.readAsBytes(),
+  );
+}
+
+void _expectKingosoftExamSchedule(
+  ParsedExamSchedule parsed, {
+  int expectedCount = 11,
+  String expectedSeatNumber = '20',
+  List<String> expectedCourseNames = const ['数学分析Ⅱ', '代数学基础 Ⅱ', '大学物理BI'],
+}) {
+  expect(parsed.exams, hasLength(expectedCount));
+  final first = parsed.exams.first;
+  expect(first.examRound, '随堂考轮次');
+  expect(first.courseCode, 'GEN01223');
+  expect(first.courseName, '游泳(初级)');
+  expect(first.startAt, DateTime(2026, 6, 8, 13, 30));
+  expect(first.endAt, DateTime(2026, 6, 8, 15, 10));
+  expect(first.semesterWeek, 15);
+  expect(first.weekday, DateTime.monday);
+  expect(first.location, '体育场 游泳馆');
+  expect(first.seatNumber, expectedSeatNumber);
+  expect(
+    parsed.exams.map((exam) => exam.courseName),
+    containsAll(expectedCourseNames),
+  );
 }

@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/time/period.dart';
+
 enum WeekParity { all, odd, even }
 
 class CourseSlot {
-  const CourseSlot({
+  CourseSlot({
     required this.id,
     this.courseId,
     this.sessionId,
+    this.examId,
     required this.name,
     required this.teacher,
     required this.location,
     required this.weekday,
-    required this.startPeriod,
-    required this.endPeriod,
+    required this.timeRange,
     required this.startWeek,
     required this.endWeek,
     required this.parity,
@@ -24,18 +26,28 @@ class CourseSlot {
   final String id;
   final int? courseId;
   final int? sessionId;
+  final int? examId;
   final String name;
   final String teacher;
   final String location;
   final int weekday;
-  final int startPeriod;
-  final int endPeriod;
+  final CourseTimeRange timeRange;
   final int startWeek;
   final int endWeek;
   final WeekParity parity;
   final Color color;
   final String notes;
   final bool hidden;
+
+  int get startPeriod => timeRange.period.start;
+
+  int get endPeriod => timeRange.period.end;
+
+  int get startMinuteOfDay => timeRange.startMinuteOfDay;
+
+  int get endMinuteOfDay => timeRange.endMinuteOfDay;
+
+  bool get isExam => examId != null;
 
   bool isActiveInWeek(int week) {
     if (hidden || week < startWeek || week > endWeek) {
@@ -57,5 +69,13 @@ class CourseSlot {
     return 'Weeks $startWeek-$endWeek$parityLabel';
   }
 
-  String get periodLabel => 'Periods $startPeriod-$endPeriod';
+  String get timeLabel =>
+      '${_minuteLabel(startMinuteOfDay)}-${_minuteLabel(endMinuteOfDay)}';
+}
+
+String _minuteLabel(int minuteOfDay) {
+  final hour = minuteOfDay ~/ 60;
+  final minute = minuteOfDay % 60;
+  return '${hour.toString().padLeft(2, '0')}:'
+      '${minute.toString().padLeft(2, '0')}';
 }

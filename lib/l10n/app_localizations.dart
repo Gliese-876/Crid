@@ -451,13 +451,13 @@ abstract class AppLocalizations {
   /// No description provided for @startPeriod.
   ///
   /// In zh_Hans, this message translates to:
-  /// **'开始节次'**
+  /// **'开始时间'**
   String get startPeriod;
 
   /// No description provided for @endPeriod.
   ///
   /// In zh_Hans, this message translates to:
-  /// **'结束节次'**
+  /// **'结束时间'**
   String get endPeriod;
 
   /// No description provided for @startWeek.
@@ -502,11 +502,17 @@ abstract class AppLocalizations {
   /// **'请输入 1-30'**
   String get weekNumberValidation;
 
+  /// No description provided for @timeValidation.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'请使用 HH:mm，且结束时间晚于开始时间。'**
+  String get timeValidation;
+
   /// No description provided for @courseSaved.
   ///
   /// In zh_Hans, this message translates to:
-  /// **'已保存 {course}：星期 {weekday}，第 {start}-{end} 节。'**
-  String courseSaved(String course, int weekday, int start, int end);
+  /// **'已保存 {course}：星期 {weekday}，{start}-{end}。'**
+  String courseSaved(String course, int weekday, String start, String end);
 
   /// No description provided for @courseSessionDeleted.
   ///
@@ -543,6 +549,24 @@ abstract class AppLocalizations {
   /// In zh_Hans, this message translates to:
   /// **'选择文件'**
   String get chooseFile;
+
+  /// No description provided for @pasteExamSchedule.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'粘贴考试安排'**
+  String get pasteExamSchedule;
+
+  /// No description provided for @pasteExamScheduleHint.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'粘贴教务系统考试安排表中的文本。'**
+  String get pasteExamScheduleHint;
+
+  /// No description provided for @importExamSchedule.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'导入考试安排'**
+  String get importExamSchedule;
 
   /// No description provided for @loadSample.
   ///
@@ -592,6 +616,18 @@ abstract class AppLocalizations {
   /// **'{count} 条新增'**
   String newCount(int count);
 
+  /// No description provided for @skippedCount.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'{count} 条跳过'**
+  String skippedCount(int count);
+
+  /// No description provided for @examParsedCount.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'{count} 条考试安排'**
+  String examParsedCount(int count);
+
   /// No description provided for @changeCount.
   ///
   /// In zh_Hans, this message translates to:
@@ -627,6 +663,12 @@ abstract class AppLocalizations {
   /// In zh_Hans, this message translates to:
   /// **'已加入 {added} 个新安排；{diffs} 处变化和 {conflicts} 个时间重叠可继续确认。'**
   String committedSummary(int added, int diffs, int conflicts);
+
+  /// No description provided for @examImportCommittedSummary.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'已导入 {added} 条考试安排，跳过 {skipped} 条重复记录。'**
+  String examImportCommittedSummary(int added, int skipped);
 
   /// No description provided for @importWarningUnsupportedFileType.
   ///
@@ -747,6 +789,24 @@ abstract class AppLocalizations {
   /// In zh_Hans, this message translates to:
   /// **'周次'**
   String get weeks;
+
+  /// No description provided for @examRound.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'考试轮次'**
+  String get examRound;
+
+  /// No description provided for @examTime.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'考试时间'**
+  String get examTime;
+
+  /// No description provided for @seatNumber.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'座位号'**
+  String get seatNumber;
 
   /// No description provided for @recentBatches.
   ///
@@ -1114,6 +1174,36 @@ abstract class AppLocalizations {
   /// **'课表、导入记录和提醒设置只保存在本机。'**
   String get localDataSubtitle;
 
+  /// No description provided for @backupLocalData.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'备份到本地'**
+  String get backupLocalData;
+
+  /// No description provided for @restoreLocalData.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'从备份恢复'**
+  String get restoreLocalData;
+
+  /// No description provided for @backupCreated.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'备份已保存到 {path}'**
+  String backupCreated(String path);
+
+  /// No description provided for @backupRestored.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'数据和设置已恢复。'**
+  String get backupRestored;
+
+  /// No description provided for @localDataActionFailed.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'本地数据操作失败：{error}'**
+  String localDataActionFailed(Object error);
+
   /// No description provided for @offlineAppSubtitle.
   ///
   /// In zh_Hans, this message translates to:
@@ -1123,14 +1213,26 @@ abstract class AppLocalizations {
   /// No description provided for @thirdPartyLicenses.
   ///
   /// In zh_Hans, this message translates to:
-  /// **'第三方开源许可'**
+  /// **'开放源代码许可'**
   String get thirdPartyLicenses;
 
   /// No description provided for @thirdPartyLicensesSubtitle.
   ///
   /// In zh_Hans, this message translates to:
-  /// **'查看 Flutter 和依赖库的开源许可。'**
+  /// **'查看课格、Flutter 和依赖库的开放源代码许可。'**
   String get thirdPartyLicensesSubtitle;
+
+  /// No description provided for @appLicenseDisplayName.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'课格（Crid）'**
+  String get appLicenseDisplayName;
+
+  /// No description provided for @appLicenseSummary.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'课格（Crid）采用 Apache License 2.0 开放源代码许可；分发时请保留 LICENSE 和 NOTICE 中的归属声明。'**
+  String get appLicenseSummary;
 
   /// No description provided for @reminders.
   ///
@@ -1251,6 +1353,48 @@ abstract class AppLocalizations {
   /// In zh_Hans, this message translates to:
   /// **'{minutes} 分钟'**
   String minutesShort(int minutes);
+
+  /// No description provided for @customReminderTime.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'自定义时间'**
+  String get customReminderTime;
+
+  /// No description provided for @minutesBeforeClass.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'上课前'**
+  String get minutesBeforeClass;
+
+  /// No description provided for @minutesUnit.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'分钟'**
+  String get minutesUnit;
+
+  /// No description provided for @ignoreDoNotDisturb.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'忽略免打扰'**
+  String get ignoreDoNotDisturb;
+
+  /// No description provided for @ignoreDoNotDisturbSubtitle.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'Android 会打开系统授权页；授权后提醒渠道可绕过免打扰。'**
+  String get ignoreDoNotDisturbSubtitle;
+
+  /// No description provided for @vibrateReminder.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'关闭提醒声音'**
+  String get vibrateReminder;
+
+  /// No description provided for @vibrateReminderSubtitle.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'课程提醒仍会振动，但不播放提示音。'**
+  String get vibrateReminderSubtitle;
 
   /// No description provided for @goToToday.
   ///

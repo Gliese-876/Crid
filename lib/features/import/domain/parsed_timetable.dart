@@ -60,20 +60,28 @@ class ParsedCourse {
   ParsedCourse({
     required this.name,
     required this.weekday,
-    required this.period,
+    required PeriodRange period,
     required this.weeks,
+    CourseTimeRange? timeRange,
     this.teacher = '',
     this.location = '',
     this.sourceId,
     this.rawText,
     String? sourceFingerprint,
-  }) : sourceFingerprint =
+  }) : timeRange =
+           timeRange ?? CourseTimeRange.fromPeriods(period.start, period.end),
+       period =
+           (timeRange ?? CourseTimeRange.fromPeriods(period.start, period.end))
+               .period,
+       sourceFingerprint =
            sourceFingerprint ??
            _fingerprint(
              name: name,
              teacher: teacher,
              weekday: weekday,
-             period: period,
+             timeRange:
+                 timeRange ??
+                 CourseTimeRange.fromPeriods(period.start, period.end),
              weeks: weeks,
              location: location,
            );
@@ -83,6 +91,7 @@ class ParsedCourse {
   final String location;
   final int weekday;
   final PeriodRange period;
+  final CourseTimeRange timeRange;
   final WeekPattern weeks;
   final String? sourceId;
   final String? rawText;
@@ -94,6 +103,7 @@ class ParsedCourse {
     String? location,
     int? weekday,
     PeriodRange? period,
+    CourseTimeRange? timeRange,
     WeekPattern? weeks,
     String? sourceId,
     String? rawText,
@@ -105,6 +115,7 @@ class ParsedCourse {
       location: location ?? this.location,
       weekday: weekday ?? this.weekday,
       period: period ?? this.period,
+      timeRange: timeRange ?? this.timeRange,
       weeks: weeks ?? this.weeks,
       sourceId: sourceId ?? this.sourceId,
       rawText: rawText ?? this.rawText,
@@ -115,19 +126,22 @@ class ParsedCourse {
   String get identityKey => normalizeCourseText(name);
 
   String get scheduleKey =>
-      [weekday, period.normalizedKey, weeks.normalizedKey].join('|');
+      [weekday, timeRangeKey, weeks.normalizedKey].join('|');
 
   bool overlapsInTime(ParsedCourse other) {
     return weekday == other.weekday &&
-        period.overlaps(other.period) &&
+        timeRange.overlaps(other.timeRange) &&
         weeks.overlaps(other.weeks);
   }
+
+  String get timeRangeKey =>
+      '${timeRange.startMinuteOfDay}-${timeRange.endMinuteOfDay}';
 
   static String _fingerprint({
     required String name,
     required String teacher,
     required int weekday,
-    required PeriodRange period,
+    required CourseTimeRange timeRange,
     required WeekPattern weeks,
     required String location,
   }) {
@@ -135,7 +149,7 @@ class ParsedCourse {
       normalizeCourseText(name),
       normalizeCourseText(teacher),
       weekday,
-      period.normalizedKey,
+      '${timeRange.startMinuteOfDay}-${timeRange.endMinuteOfDay}',
       weeks.normalizedKey,
       normalizeCourseText(location),
     ].join('|');
