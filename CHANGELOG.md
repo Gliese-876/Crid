@@ -2,6 +2,12 @@
 
 ## 1.2.0-release - 2026-07-15
 
+### 课表显示
+
+- 新增“显示非本周课程”开关，Android 和 Windows 用户都可以在“设置 → 显示”中开启；开启后，未在所选周上课的课程仍会保留在课表对应位置，并以灰色遮罩区分。
+- 该选项默认关闭，保持课表只显示所选周实际课程的原有行为；设置会在本地持久化。
+- 周课表和全学期 PNG 导出提供独立的“显示非本周课程”开关，不会改动日常课表的显示偏好。
+
 ### Windows 原生能力
 
 - 将 Android 课程提醒对应到 Windows 原生 Toast 通知：通过 C++/WinRT 查询系统通知可用状态，并从设置页直接打开 Windows 通知设置。
@@ -16,7 +22,6 @@
 - 为导入、导出、课程编辑、设置、许可证和冲突页增加按路由区分的桌面内容宽度，不再把移动端卡片拉伸到整个窗口。
 - 将设置页改为双栏桌面工作区，并用 Windows 原生提醒状态替代 Android 后台运行卡片。
 - 将导入页改为“来源/历史 + 预览”双栏工作区，将导出页改为三任务卡桌面布局；方案和课程编辑页继续使用响应式双栏。
-- 增加“显示非当前周课程”设置，课表可将非当前周课程隐藏或置灰；图片导出使用独立设置，避免修改日常课表显示偏好。
 - 补齐简体中文、繁体中文和英文的 Windows、显示和导出文案。
 
 ### 数据稳定性与测试
@@ -30,14 +35,18 @@
 - 将应用版本提升到 `1.2.0-release+3`，将 Windows MSIX 版本提升到 `1.2.0.0`。
 - 增加一键安装/更新脚本。首次安装只需一次 UAC 确认以信任本地计算机证书，后续使用同一证书更新时无需再次提权。
 - Windows Release 改为 ZIP 分发，统一包含公开证书、安装脚本和已签名 MSIX；私钥 PFX 不进入发布产物。
+- 发布 Android `1.2.0-release` 正式签名 APK，包括一个覆盖 arm64-v8a、armeabi-v7a 和 x86_64 的通用包，以及三个分 ABI 安装包。
 - 增加 Android 到 Windows 的功能对等矩阵，并更新 README 和开发文档中的 Windows 安装、原生能力与发布流程。
 
 本次发布已验证：
 
 - `flutter analyze`
 - `flutter test`
+- `android\gradlew.bat assembleRelease --offline`
+- `android\gradlew.bat assembleRelease --offline -Psplit-per-abi=true`
 - `flutter build windows --release --build-name=1.2.0-release --build-number=3`
 - `dart run msix:create --certificate-password <local certificate password>`
+- Android APK 包身份、版本、ABI 与发布签名检查
 - Windows 安装脚本 PowerShell 语法、MSIX 清单版本、签名和 ZIP 内容检查
 
 

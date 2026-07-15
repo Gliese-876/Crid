@@ -19,6 +19,7 @@ There are already many mature timetable apps. However, many of them are closed s
 ## Current Features
 
 - View and edit timetables
+- Optionally show courses outside the selected week in gray, with an independent image-export preference
 - Course reminders
 - Native Windows notifications, File Explorer associations, and wide desktop workspaces
 - Automatic make-up workday adjustment
@@ -32,17 +33,17 @@ There are already many mature timetable apps. However, many of them are closed s
 
 ## Installation
 
-Release builds are published on [GitHub Releases](https://github.com/Gliese-876/Crid/releases). The latest Windows release is `v1.2.0`; the latest Android package remains `v1.1.0`.
+Release builds are published on [GitHub Releases](https://github.com/Gliese-876/Crid/releases). The latest Windows and Android release is `v1.2.0`.
 
 ### Android
 
-Download `Crid-1.1.0-release-android.apk` and install it directly. If Android blocks installation from unknown sources, enable the “Install unknown apps” permission for your browser or file manager.
+Download `Crid-1.2.0-release-android.apk` and install it directly. If Android blocks installation from unknown sources, enable the “Install unknown apps” permission for your browser or file manager.
 
 Smaller architecture-specific APKs are also available:
 
-- `Crid-1.1.0-release-android-arm64.apk`: most recent Android phones
-- `Crid-1.1.0-release-android-armeabi-v7a.apk`: older 32-bit Android devices
-- `Crid-1.1.0-release-android-x86_64.apk`: x86_64 emulators or a small number of x86_64 devices
+- `Crid-1.2.0-release-android-arm64.apk`: most recent Android phones
+- `Crid-1.2.0-release-android-armeabi-v7a.apk`: older 32-bit Android devices
+- `Crid-1.2.0-release-android-x86_64.apk`: x86_64 emulators or a small number of x86_64 devices
 
 ### Windows
 

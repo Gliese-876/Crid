@@ -19,6 +19,7 @@
 ## 现有功能
 
 - 查看和编辑课表
+- 可选择以灰色显示非本周课程，并为图片导出单独设置显示方式
 - 上课提醒
 - Windows 原生通知、资源管理器文件关联和桌面宽屏工作区
 - 调休自动调整
@@ -32,17 +33,17 @@
 
 ## 如何安装
 
-正式版安装包发布在 [GitHub Releases](https://github.com/Gliese-876/Crid/releases)。最新 Windows 版是 `v1.2.0`；Android 最新安装包仍为 `v1.1.0`。
+正式版安装包发布在 [GitHub Releases](https://github.com/Gliese-876/Crid/releases)。Windows 和 Android 最新版本均为 `v1.2.0`。
 
 ### Android
 
-下载 `Crid-1.1.0-release-android.apk` 后直接安装即可。如果系统提示不允许安装未知来源应用，请在 Android 设置中为浏览器或文件管理器开启“安装未知应用”权限。
+下载 `Crid-1.2.0-release-android.apk` 后直接安装即可。如果系统提示不允许安装未知来源应用，请在 Android 设置中为浏览器或文件管理器开启“安装未知应用”权限。
 
 也可以按设备架构下载体积更小的分包：
 
-- `Crid-1.1.0-release-android-arm64.apk`：大多数近年的 Android 手机
-- `Crid-1.1.0-release-android-armeabi-v7a.apk`：较老的 32 位 Android 设备
-- `Crid-1.1.0-release-android-x86_64.apk`：x86_64 模拟器或少数 x86_64 设备
+- `Crid-1.2.0-release-android-arm64.apk`：大多数近年的 Android 手机
+- `Crid-1.2.0-release-android-armeabi-v7a.apk`：较老的 32 位 Android 设备
+- `Crid-1.2.0-release-android-x86_64.apk`：x86_64 模拟器或少数 x86_64 设备
 
 ### Windows
 

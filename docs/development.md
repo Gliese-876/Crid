@@ -356,9 +356,13 @@ Windows：
 11. 实现 ICS 导出和图片导出。
 12. 完成 Android 与 Windows 验收测试。
 
-## 15. Windows 安装与发布
+## 15. Android 与 Windows 安装和发布
 
-### 分发结构
+### Android 分发
+
+Android Release 发布一个覆盖 arm64-v8a、armeabi-v7a 和 x86_64 的通用 APK，并同时发布三个分 ABI APK。所有 APK 必须使用正式版密钥签名，并在上传前核对包名 `app.crid.release`、版本、目标 ABI 和签名；私钥、密码及 `android/key.properties` 不得进入 Git 或 Release。
+
+### Windows 分发结构
 
 Windows Release 只发布一个 `Crid-<version>-windows-x64.zip`，ZIP 内必须包含：
 
@@ -376,7 +380,8 @@ Windows Release 只发布一个 `Crid-<version>-windows-x64.zip`，ZIP 内必须
 1. 审计 `git diff HEAD`，确保更新日志覆盖上一次提交以来的全部变更。
 2. 同步 `pubspec.yaml` 中的 Flutter 版本和 `msix_version`，并更新中英文更新日志、README 与本开发文档。
 3. 运行 `flutter gen-l10n`、`flutter analyze` 和 `flutter test`。
-4. 运行 `flutter build windows --release --build-name=<version>-release --build-number=<build>`。
-5. 使用本地证书密码运行 `dart run msix:create --certificate-password <password>`，不得在日志、提交或发布说明中记录密码。
-6. 将 MSIX、公开 CER 和 `scripts/windows/Install-Crid.*` 复制到独立发布目录，压缩为 ZIP，并生成 SHA-256。
-7. 复核 ZIP 内容、MSIX 清单版本和 Authenticode 签名后，再提交、推送、创建标签与 GitHub Release。
+4. 运行 `flutter build apk --release` 和 `flutter build apk --release --split-per-abi`，核对四个 APK 的包身份、版本、ABI 和发布签名。
+5. 运行 `flutter build windows --release --build-name=<version>-release --build-number=<build>`。
+6. 使用本地证书密码运行 `dart run msix:create --certificate-password <password>`，不得在日志、提交或发布说明中记录密码。
+7. 将 MSIX、公开 CER 和 `scripts/windows/Install-Crid.*` 复制到独立发布目录，压缩为 ZIP；连同 Android APK 一并生成 SHA-256。
+8. 复核 Android APK、Windows ZIP 内容、MSIX 清单版本和各平台签名后，再提交、推送、创建标签与 GitHub Release。

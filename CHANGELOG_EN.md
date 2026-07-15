@@ -2,6 +2,12 @@
 
 ## 1.2.0-release - 2026-07-15
 
+### Timetable display
+
+- Added a “show courses outside the current week” switch for both Android and Windows under Settings → Display. When enabled, courses not held in the selected week remain in their timetable positions and are distinguished with a gray overlay.
+- The preference defaults to off, preserving the original behavior of showing only courses actually held in the selected week, and is persisted locally.
+- Weekly and full-semester PNG export provides an independent switch for inactive-week courses, so exporting does not change the everyday timetable preference.
+
 ### Native Windows capabilities
 
 - Mapped Android course reminders to native Windows toast notifications, including a C++/WinRT notification-status query and a direct link from Settings to Windows notification settings.
@@ -16,7 +22,6 @@
 - Added route-specific desktop content widths for import, export, editing, settings, licenses, and conflict handling instead of stretching mobile cards across the window.
 - Rebuilt Settings as a two-column desktop workspace and replaced Android background-service controls with native Windows reminder status.
 - Rebuilt Import as a source/history plus preview workspace and Export as a three-tile desktop workspace; plans and course editing retain responsive two-column layouts.
-- Added a “show courses outside the current week” preference. The timetable can hide or gray inactive-week courses, while image export keeps an independent preference.
 - Completed Simplified Chinese, Traditional Chinese, and English strings for the Windows, display, and export additions.
 
 ### Data reliability and tests
@@ -30,14 +35,18 @@
 - Raised the app version to `1.2.0-release+3` and the Windows MSIX version to `1.2.0.0`.
 - Added a one-click install/update workflow. A first install uses one UAC confirmation to trust the machine certificate; later updates signed by the same certificate do not need elevation.
 - Changed the Windows Release artifact to a ZIP containing the public certificate, installer scripts, and signed MSIX. The private PFX is never distributed.
+- Published signed Android `1.2.0-release` APKs: one universal package covering arm64-v8a, armeabi-v7a, and x86_64, plus three ABI-specific packages.
 - Added an Android-to-Windows feature parity matrix and updated the README and development documentation for Windows installation, native integration, and releases.
 
 Validated for this release:
 
 - `flutter analyze`
 - `flutter test`
+- `android\gradlew.bat assembleRelease --offline`
+- `android\gradlew.bat assembleRelease --offline -Psplit-per-abi=true`
 - `flutter build windows --release --build-name=1.2.0-release --build-number=3`
 - `dart run msix:create --certificate-password <local certificate password>`
+- Android APK identity, version, ABI, and release-signature checks
 - PowerShell installer syntax, MSIX manifest version, signature, and ZIP content checks
 
 
