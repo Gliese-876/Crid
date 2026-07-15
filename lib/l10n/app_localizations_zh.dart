@@ -580,6 +580,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String failedToLoadTimetableDisplaySetting(Object error) {
+    return '课表显示设置加载失败：$error';
+  }
+
+  @override
+  String failedToLoadExportDisplaySetting(Object error) {
+    return '导出显示设置加载失败：$error';
+  }
+
+  @override
   String get language => '语言';
 
   @override
@@ -596,6 +606,19 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get display => '显示';
+
+  @override
+  String get showNonCurrentWeekCourses => '显示非本周课程';
+
+  @override
+  String get showNonCurrentWeekCoursesSubtitle => '开启后，非本周课程会以灰色显示在课表中。';
+
+  @override
+  String get exportDisplaySettings => '导出显示';
+
+  @override
+  String get showNonCurrentWeekCoursesInExportSubtitle =>
+      '开启后，周课表和整学期 PNG 中的非本周课程会以灰色显示。';
 
   @override
   String get themeModeSystem => '跟随系统';
@@ -694,6 +717,27 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get windowsReminderSettings => 'Windows 课程提醒';
+
+  @override
+  String get windowsReminderSettingsSubtitle =>
+      'Windows 会通过系统调度已启用的提醒，关闭课格后也不需要保持后台运行。';
+
+  @override
+  String get windowsSystemNotifications => '系统通知';
+
+  @override
+  String get windowsNotificationsAllowed => '通知已开启，关闭课格后系统仍可显示已调度的提醒。';
+
+  @override
+  String get windowsNotificationsBlocked => 'Windows 通知已关闭，请在系统设置中开启以接收课程提醒。';
+
+  @override
+  String failedToLoadWindowsReminderStatus(Object error) {
+    return 'Windows 提醒状态加载失败：$error';
+  }
+
+  @override
   String get persistentBackgroundRuntime => '持续后台运行';
 
   @override
@@ -743,10 +787,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ignoreDoNotDisturbSubtitle => 'Android 会打开系统授权页；授权后提醒渠道可绕过免打扰。';
 
   @override
+  String get windowsIgnoreDoNotDisturbSubtitle =>
+      'Windows 会将课程提醒标记为紧急通知，使其可以绕过免打扰。';
+
+  @override
   String get vibrateReminder => '关闭提醒声音';
 
   @override
   String get vibrateReminderSubtitle => '课程提醒仍会振动，但不播放提示音。';
+
+  @override
+  String get windowsMuteReminderSoundSubtitle =>
+      'Windows 会静音显示课程提醒；是否振动由设备和系统设置决定。';
 
   @override
   String get goToToday => '回到今天';
@@ -1469,6 +1521,16 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
+  String failedToLoadTimetableDisplaySetting(Object error) {
+    return '课表显示设置加载失败：$error';
+  }
+
+  @override
+  String failedToLoadExportDisplaySetting(Object error) {
+    return '导出显示设置加载失败：$error';
+  }
+
+  @override
   String get language => '语言';
 
   @override
@@ -1485,6 +1547,19 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get display => '显示';
+
+  @override
+  String get showNonCurrentWeekCourses => '显示非本周课程';
+
+  @override
+  String get showNonCurrentWeekCoursesSubtitle => '开启后，非本周课程会以灰色显示在课表中。';
+
+  @override
+  String get exportDisplaySettings => '导出显示';
+
+  @override
+  String get showNonCurrentWeekCoursesInExportSubtitle =>
+      '开启后，周课表和整学期 PNG 中的非本周课程会以灰色显示。';
 
   @override
   String get themeModeSystem => '跟随系统';
@@ -1583,6 +1658,27 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
+  String get windowsReminderSettings => 'Windows 课程提醒';
+
+  @override
+  String get windowsReminderSettingsSubtitle =>
+      'Windows 会通过系统调度已启用的提醒，关闭课格后也不需要保持后台运行。';
+
+  @override
+  String get windowsSystemNotifications => '系统通知';
+
+  @override
+  String get windowsNotificationsAllowed => '通知已开启，关闭课格后系统仍可显示已调度的提醒。';
+
+  @override
+  String get windowsNotificationsBlocked => 'Windows 通知已关闭，请在系统设置中开启以接收课程提醒。';
+
+  @override
+  String failedToLoadWindowsReminderStatus(Object error) {
+    return 'Windows 提醒状态加载失败：$error';
+  }
+
+  @override
   String get persistentBackgroundRuntime => '持续后台运行';
 
   @override
@@ -1632,10 +1728,18 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get ignoreDoNotDisturbSubtitle => 'Android 会打开系统授权页；授权后提醒渠道可绕过免打扰。';
 
   @override
+  String get windowsIgnoreDoNotDisturbSubtitle =>
+      'Windows 会将课程提醒标记为紧急通知，使其可以绕过免打扰。';
+
+  @override
   String get vibrateReminder => '关闭提醒声音';
 
   @override
   String get vibrateReminderSubtitle => '课程提醒仍会振动，但不播放提示音。';
+
+  @override
+  String get windowsMuteReminderSoundSubtitle =>
+      'Windows 会静音显示课程提醒；是否振动由设备和系统设置决定。';
 
   @override
   String get goToToday => '回到今天';
@@ -2358,6 +2462,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
+  String failedToLoadTimetableDisplaySetting(Object error) {
+    return '課表顯示設定載入失敗：$error';
+  }
+
+  @override
+  String failedToLoadExportDisplaySetting(Object error) {
+    return '匯出顯示設定載入失敗：$error';
+  }
+
+  @override
   String get language => '語言';
 
   @override
@@ -2374,6 +2488,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get display => '顯示';
+
+  @override
+  String get showNonCurrentWeekCourses => '顯示非本週課程';
+
+  @override
+  String get showNonCurrentWeekCoursesSubtitle => '開啟後，非本週課程會以灰色顯示在課表中。';
+
+  @override
+  String get exportDisplaySettings => '匯出顯示';
+
+  @override
+  String get showNonCurrentWeekCoursesInExportSubtitle =>
+      '開啟後，週課表和整學期 PNG 中的非本週課程會以灰色顯示。';
 
   @override
   String get themeModeSystem => '跟隨系統';
@@ -2472,6 +2599,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
+  String get windowsReminderSettings => 'Windows 課程提醒';
+
+  @override
+  String get windowsReminderSettingsSubtitle =>
+      'Windows 會透過系統排程已啟用的提醒，關閉課格後也不需要保持背景執行。';
+
+  @override
+  String get windowsSystemNotifications => '系統通知';
+
+  @override
+  String get windowsNotificationsAllowed => '通知已開啟，關閉課格後系統仍可顯示已排程的提醒。';
+
+  @override
+  String get windowsNotificationsBlocked => 'Windows 通知已關閉，請在系統設定中開啟以接收課程提醒。';
+
+  @override
+  String failedToLoadWindowsReminderStatus(Object error) {
+    return 'Windows 提醒狀態載入失敗：$error';
+  }
+
+  @override
   String get persistentBackgroundRuntime => '持續背景執行';
 
   @override
@@ -2521,10 +2669,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get ignoreDoNotDisturbSubtitle => 'Android 會開啟系統授權頁；授權後提醒頻道可繞過勿擾模式。';
 
   @override
+  String get windowsIgnoreDoNotDisturbSubtitle =>
+      'Windows 會將課程提醒標記為緊急通知，使其可以繞過勿擾模式。';
+
+  @override
   String get vibrateReminder => '關閉提醒聲音';
 
   @override
   String get vibrateReminderSubtitle => '課程提醒仍會振動，但不播放提示音。';
+
+  @override
+  String get windowsMuteReminderSoundSubtitle =>
+      'Windows 會靜音顯示課程提醒；是否振動由裝置和系統設定決定。';
 
   @override
   String get goToToday => '回到今天';

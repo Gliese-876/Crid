@@ -20,6 +20,7 @@ There are already many mature timetable apps. However, many of them are closed s
 
 - View and edit timetables
 - Course reminders
+- Native Windows notifications, File Explorer associations, and wide desktop workspaces
 - Automatic make-up workday adjustment
 - Import `.xls` timetables from academic systems
 - Import `.mht`, `.mhtml`, and `.pdf` exam schedules from academic systems
@@ -31,13 +32,13 @@ There are already many mature timetable apps. However, many of them are closed s
 
 ## Installation
 
-Release builds are published on [GitHub Releases](https://github.com/Gliese-876/Crid/releases). The latest official release is `v1.1.0-release`.
+Release builds are published on [GitHub Releases](https://github.com/Gliese-876/Crid/releases). The latest Windows release is `v1.2.0`; the latest Android package remains `v1.1.0`.
 
 ### Android
 
-Download `Crid-1.1.0-release-android.apk` and install it directly. If Android blocks installation from unknown sources, enable the "Install unknown apps" permission for your browser or file manager.
+Download `Crid-1.1.0-release-android.apk` and install it directly. If Android blocks installation from unknown sources, enable the “Install unknown apps” permission for your browser or file manager.
 
-You can also download a smaller APK for your device architecture:
+Smaller architecture-specific APKs are also available:
 
 - `Crid-1.1.0-release-android-arm64.apk`: most recent Android phones
 - `Crid-1.1.0-release-android-armeabi-v7a.apk`: older 32-bit Android devices
@@ -45,27 +46,19 @@ You can also download a smaller APK for your device architecture:
 
 ### Windows
 
-Download both files:
+1. Download and fully extract `Crid-1.2.0-windows-x64.zip`.
+2. Double-click `Install-Crid.cmd`.
+3. On the first install, approve the single UAC prompt that adds the bundled public certificate to the Local Machine Trusted People store. Open Crid from the Start menu when installation finishes.
 
-- `Crid-1.1.0-release-windows.msix`
-- `Crid-1.1.0-release-windows.cer`
+To update, extract the newer ZIP and run `Install-Crid.cmd` again. Later updates signed with the same certificate normally do not require UAC.
 
-The Windows package currently uses a self-signed certificate, so Windows must trust the bundled certificate before installation. The recommended way is to run these commands in an administrator PowerShell:
-
-```powershell
-$certPath = "C:\path\to\Crid-1.1.0-release-windows.cer"
-
-Import-Certificate -FilePath $certPath -CertStoreLocation Cert:\LocalMachine\TrustedPeople
-Import-Certificate -FilePath $certPath -CertStoreLocation Cert:\LocalMachine\Root
-```
-
-Then double-click the `.msix` file, or install it from the same administrator PowerShell:
+For a manual install, import the bundled `.cer` into `Cert:\LocalMachine\TrustedPeople`, then run:
 
 ```powershell
-Add-AppxPackage -Path "C:\path\to\Crid-1.1.0-release-windows.msix"
+Add-AppxPackage -Path "C:\path\to\Crid-1.2.0-windows-x64.msix" -ForceApplicationShutdown -ForceUpdateFromAnyVersion
 ```
 
-If App Installer reports `0x800B0109`, the certificate was probably imported only for the current user instead of the local machine trusted certificate stores.
+Error `0x800B0109` usually means the certificate was not added to the Local Machine Trusted People store.
 
 ## Technical Structure
 
@@ -80,7 +73,7 @@ The project uses a feature-first structure. The main directories are:
 | `lib/features/editor/` | Course creation and editing |
 | `lib/features/export/` | ICS and image export |
 | `lib/features/reminder/` | Local course reminders and rolling reminder window |
-| `lib/features/settings/` | Settings page, holiday data, and Android background settings |
+| `lib/features/settings/` | Settings, holiday data, Android background controls, and native Windows integration |
 | `lib/l10n/` | Simplified Chinese, Traditional Chinese, and English strings |
 | `test/` | Import, reminder, export, theme, repository, and UI tests |
 
@@ -98,15 +91,15 @@ Core dependencies:
 
 ## Known Issues
 
-- Timetable and exam schedule parsing is currently focused on Beijing Normal University Zhuhai campus files
-- The notification system may be unstable
-- The Windows version is still immature and differs noticeably from the Android version in interface and functionality
+- Timetable and exam parsing is currently focused on Beijing Normal University Zhuhai campus files
+- The Windows MSIX uses a self-signed certificate, so the first install needs one UAC confirmation to establish machine trust
+- Windows toast delivery is still subject to system notification settings, Focus Assist, and organization policy
 
 ## Near-Term Plan
 
 - [ ] Support the timetable file format used by Beijing Normal University Beijing campus
 - [ ] Improve notification stability
-- [ ] Improve the Windows interface and features so they are more consistent with Android
+- [ ] Continue improving Windows keyboard shortcuts, accessibility, and update experience
 - [ ] Add widget support
 
 ## Long-Term Vision

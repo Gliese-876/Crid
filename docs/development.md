@@ -7,7 +7,7 @@ Crid（课格）是一款面向校园课表管理的应用，使用 Flutter 开�
 第一版重点解决以下问题：
 
 - 从教务系统或第三方课表工具导入课程表。
-- 支持 `.xls`、HTML 表格型 `.xls`、`.ics` 三类文件。
+- 支持 BIFF/HTML `.xls`、`.ics` 课表，以及 `.mht`、`.mhtml`、`.pdf` 和文本考试安排。
 - 在 Android 和 Windows 上提供一致但自适应的课表体验。
 - 支持多学期、多课表方案。
 - 支持课程编辑、导入合并、冲突 diff、课前提醒、ICS 导出和图片导出。
@@ -126,13 +126,14 @@ lib/
 4. 进入 staging，展示解析摘要。
 5. 调用 merge engine，与目标课表方案合并。
 
-三类文件处理策略：
+课表与考试文件处理策略：
 
 | 文件类型 | 处理方式 |
 |---|---|
 | BIFF8 `.xls` | 优先评估成熟第三方库；若可用库成熟度不足，则通过 `BiffXlsParserAdapter` 隔离实现，并用样例和 golden 测试固定行为 |
 | HTML `.xls` | 按 GBK 解码，用 HTML parser 提取表格 |
 | `.ics` | 按 UTF-8 读取，优先使用成熟 iCalendar/RRULE 库解析 SUMMARY、DTSTART、DTEND、RRULE、LOCATION、DESCRIPTION |
+| `.mht` / `.mhtml` / `.pdf` / `.txt` | 通过 `KingosoftExamParser` 解析考试轮次、课程、时间、地点、座位和备注 |
 
 导入 parser 必须输出统一结构：
 
@@ -220,8 +221,11 @@ class ParsedTimetable {
 - 课前 20 分钟提醒。
 - 用户可关闭全局提醒。
 - 用户可按课程关闭提醒。
-- Android 和 Windows 均使用 `flutter_local_notifications`。
-- Windows 发布目标为 MSIX，以获得更稳定的通知能力。
+- Android 和 Windows 均使用 `flutter_local_notifications`，平台差异封装在 service/adapter 中。
+- Android 使用系统闹钟、通知权限、开机接收器和可选前台服务。
+- Windows 使用系统 Toast 队列，勿扰绕过映射为 urgent scenario，关闭声音映射为 silent audio。
+- Windows Runner 通过 C++/WinRT 查询 Toast 可用状态，并提供系统通知设置入口。
+- Windows 发布目标为带应用身份和 Toast 激活器的 MSIX。
 
 提醒调度采用未来四周的滚动窗口，不应一次性排完整学期，避免平台限制和权限问题。
 
@@ -263,10 +267,12 @@ Android：
 
 Windows：
 
-- NavigationRail。
-- 宽屏支持多栏布局。
-- 课表区域更密集。
-- 适合鼠标操作和键盘快捷键的布局，但第一版不强制实现完整快捷键系统。
+- 使用可折叠 NavigationRail 和持续可见的桌面工具栏。
+- 设置、导入、方案和编辑页使用响应式双栏；导出页使用三任务卡工作区。
+- 二级页面使用按路由区分的最大内容宽度，避免移动端卡片横向拉伸。
+- 课表区域在宽屏下提高信息密度，并保留鼠标、键盘焦点和无障碍语义。
+- 文件选择、保存、打开和通知设置均连接 Windows 原生能力。
+- 支持从资源管理器通过 MSIX 文件关联直接打开课表或考试文件。
 
 主要页面：
 
@@ -315,9 +321,14 @@ Android：
 
 Windows：
 
-- 使用 MSIX 安装包。
-- 需要配置应用身份、图标和通知能力。
-- 文件导入和导出使用系统文件选择器。
+- 使用带签名、应用身份、图标、Toast 激活器和文件关联的 MSIX 安装包。
+- Release 以 ZIP 分发，内含公开 CER、已签名 MSIX 和一键安装/更新脚本。
+- 首次安装允许一次 UAC，将公开证书写入本地计算机的受信任人证书存储。
+- 后续更新使用同一包身份和签名证书，通过 `Add-AppxPackage -ForceUpdateFromAnyVersion` 覆盖安装。
+- 文件导入、导出与打开使用系统选择器、保存对话框和 shell handler。
+- 双击 `.ics`、`.xls`、`.mht`、`.mhtml`、`.pdf` 或 `.txt` 可直接进入导入预览。
+- 私钥 PFX 和证书密码必须留在被忽略的本地证书目录，绝不进入源码或发布 ZIP。
+- Windows 能力对等状态维护在 `docs/windows-feature-parity.md`。
 
 第一版不支持：
 
@@ -336,7 +347,7 @@ Windows：
 2. 评估并锁定成熟第三方库；成熟度不足的能力先定义 adapter 接口。
 3. 建立 Drift 数据库和核心领域模型。
 4. 实现节次、周次、学期日期换算。
-5. 实现三类文件 parser，并用样例测试固定行为。
+5. 实现课表和考试文件 parser，并用样例测试固定行为。
 6. 实现导入 staging、自动合并和冲突 diff。
 7. 实现单课表视图和课程详情。
 8. 实现完整课程编辑器。
@@ -344,3 +355,28 @@ Windows：
 10. 实现提醒系统。
 11. 实现 ICS 导出和图片导出。
 12. 完成 Android 与 Windows 验收测试。
+
+## 15. Windows 安装与发布
+
+### 分发结构
+
+Windows Release 只发布一个 `Crid-<version>-windows-x64.zip`，ZIP 内必须包含：
+
+- 已签名的 `Crid-<version>-windows-x64.msix`。
+- 与签名对应的公开证书 `Crid-<version>-windows.cer`。
+- 双击入口 `Install-Crid.cmd`。
+- 实际安装逻辑 `Install-Crid.ps1`。
+
+安装脚本会读取 MSIX 的 `AppxManifest.xml` 获取包身份和版本。首次安装时，如果签名证书尚未位于 `Cert:\LocalMachine\TrustedPeople`，脚本通过一次 `RunAs` UAC 提权导入证书；随后验证 MSIX 签名并调用 `Add-AppxPackage -ForceUpdateFromAnyVersion` 完成安装或更新。后续使用同一证书签名的版本无需再次导入证书。
+
+私钥 `.pfx`、证书密码和密码文件只能保存在被忽略的 `windows/certs/`，不得提交到 Git，也不得放入 Release ZIP。
+
+### 发布检查清单
+
+1. 审计 `git diff HEAD`，确保更新日志覆盖上一次提交以来的全部变更。
+2. 同步 `pubspec.yaml` 中的 Flutter 版本和 `msix_version`，并更新中英文更新日志、README 与本开发文档。
+3. 运行 `flutter gen-l10n`、`flutter analyze` 和 `flutter test`。
+4. 运行 `flutter build windows --release --build-name=<version>-release --build-number=<build>`。
+5. 使用本地证书密码运行 `dart run msix:create --certificate-password <password>`，不得在日志、提交或发布说明中记录密码。
+6. 将 MSIX、公开 CER 和 `scripts/windows/Install-Crid.*` 复制到独立发布目录，压缩为 ZIP，并生成 SHA-256。
+7. 复核 ZIP 内容、MSIX 清单版本和 Authenticode 签名后，再提交、推送、创建标签与 GitHub Release。

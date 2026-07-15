@@ -11,6 +11,7 @@ import 'package:crid/app/motion.dart';
 import 'package:crid/core/time/period.dart';
 import 'package:crid/core/theme/course_colors.dart';
 import 'package:crid/features/settings/data/china_holiday_service.dart';
+import 'package:crid/features/settings/data/export_display_settings_controller.dart';
 import 'package:crid/features/settings/data/holiday_settings_controller.dart';
 import 'package:crid/features/timetable/data/timetable_repository.dart';
 import 'package:crid/l10n/app_localizations.dart';
@@ -83,56 +84,83 @@ class _ExportPageState extends ConsumerState<ExportPage> {
   @override
   Widget build(BuildContext context) {
     final busyTask = _busyTask;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      children: [
-        AnimatedSwitcher(
-          duration: appMicroMotionDuration,
-          switchInCurve: appMicroMotionCurve,
-          switchOutCurve: appMicroMotionReverseCurve,
-          child: busyTask == null
-              ? const SizedBox.shrink()
-              : Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: LinearProgressIndicator(
-                    semanticsLabel: context.l10n.preparingExport,
-                  ),
-                ),
-        ),
-        _ExportOptionCard(
-          icon: Icons.event_available_outlined,
-          title: context.l10n.icsCalendarExport,
-          subtitle: context.l10n.icsCalendarExportSubtitle,
-          actionLabel: context.l10n.exportIcs,
-          busy: busyTask == _ExportTask.ics,
-          onPressed: busyTask == null
-              ? () => _runExport(_ExportTask.ics, _exportIcs)
-              : null,
-        ),
-        const SizedBox(height: 12),
-        _ExportOptionCard(
-          icon: Icons.image_outlined,
-          title: context.l10n.currentWeekImage,
-          subtitle: context.l10n.currentWeekImageSubtitle,
-          actionLabel: context.l10n.exportPng,
-          busy: busyTask == _ExportTask.weekImage,
-          onPressed: busyTask == null
-              ? () => _runExport(_ExportTask.weekImage, _exportWeekImage)
-              : null,
-        ),
-        const SizedBox(height: 12),
-        _ExportOptionCard(
-          icon: Icons.calendar_view_month_outlined,
-          title: context.l10n.fullSemesterImage,
-          subtitle: context.l10n.fullSemesterImageSubtitle,
-          actionLabel: context.l10n.exportPng,
-          busy: busyTask == _ExportTask.semesterImage,
-          onPressed: busyTask == null
-              ? () =>
-                    _runExport(_ExportTask.semesterImage, _exportSemesterImage)
-              : null,
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useDesktopTiles = constraints.maxWidth >= 900;
+        final options = [
+          _ExportOptionCard(
+            icon: Icons.event_available_outlined,
+            title: context.l10n.icsCalendarExport,
+            subtitle: context.l10n.icsCalendarExportSubtitle,
+            actionLabel: context.l10n.exportIcs,
+            busy: busyTask == _ExportTask.ics,
+            desktopTile: useDesktopTiles,
+            onPressed: busyTask == null
+                ? () => _runExport(_ExportTask.ics, _exportIcs)
+                : null,
+          ),
+          _ExportOptionCard(
+            icon: Icons.image_outlined,
+            title: context.l10n.currentWeekImage,
+            subtitle: context.l10n.currentWeekImageSubtitle,
+            actionLabel: context.l10n.exportPng,
+            busy: busyTask == _ExportTask.weekImage,
+            desktopTile: useDesktopTiles,
+            onPressed: busyTask == null
+                ? () => _runExport(_ExportTask.weekImage, _exportWeekImage)
+                : null,
+          ),
+          _ExportOptionCard(
+            icon: Icons.calendar_view_month_outlined,
+            title: context.l10n.fullSemesterImage,
+            subtitle: context.l10n.fullSemesterImageSubtitle,
+            actionLabel: context.l10n.exportPng,
+            busy: busyTask == _ExportTask.semesterImage,
+            desktopTile: useDesktopTiles,
+            onPressed: busyTask == null
+                ? () => _runExport(
+                    _ExportTask.semesterImage,
+                    _exportSemesterImage,
+                  )
+                : null,
+          ),
+        ];
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          children: [
+            AnimatedSwitcher(
+              duration: appMicroMotionDuration,
+              switchInCurve: appMicroMotionCurve,
+              switchOutCurve: appMicroMotionReverseCurve,
+              child: busyTask == null
+                  ? const SizedBox.shrink()
+                  : Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: LinearProgressIndicator(
+                        semanticsLabel: context.l10n.preparingExport,
+                      ),
+                    ),
+            ),
+            const _ExportDisplaySettingsCard(),
+            const SizedBox(height: 12),
+            if (useDesktopTiles)
+              GridView.count(
+                crossAxisCount: 3,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                mainAxisExtent: 220,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                children: options,
+              )
+            else
+              for (var index = 0; index < options.length; index++) ...[
+                options[index],
+                if (index != options.length - 1) const SizedBox(height: 12),
+              ],
+          ],
+        );
+      },
     );
   }
 
@@ -208,13 +236,18 @@ class _ExportPageState extends ConsumerState<ExportPage> {
     final holidaySchedule = await ref.read(
       chinaHolidayScheduleProvider(dates.first.year).future,
     );
+    final showNonCurrentWeekCourses = await ref.read(
+      showNonCurrentWeekCoursesInExportProvider.future,
+    );
     final holidayRestDays = holidayRestDayFlags(
       dates: dates,
       settings: holidaySettings,
       schedule: holidaySchedule,
     );
     final visibleCourses = snapshot.courses
-        .where((course) => course.isActiveInWeek(week))
+        .where(
+          (course) => showNonCurrentWeekCourses || course.isActiveInWeek(week),
+        )
         .where(
           (course) => !_isHiddenByHoliday(
             course: course,
@@ -237,6 +270,10 @@ class _ExportPageState extends ConsumerState<ExportPage> {
         settings: holidaySettings,
         schedule: holidaySchedule,
       ),
+      nonCurrentWeekCourseIds: {
+        for (final course in visibleCourses)
+          if (!course.isActiveInWeek(week)) course.id,
+      },
       dayLabels: dayLabels,
       dates: dates,
       holidayRestDays: holidayRestDays,
@@ -282,6 +319,9 @@ class _ExportPageState extends ConsumerState<ExportPage> {
         snapshot.activeSemester.firstWeekMonday.year,
       ).future,
     );
+    final showNonCurrentWeekCourses = await ref.read(
+      showNonCurrentWeekCoursesInExportProvider.future,
+    );
     final weeks = _semesterExportWeeks(snapshot);
     final bytes = await _renderSemesterPng(
       theme: theme,
@@ -292,6 +332,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       courses: snapshot.courses,
       holidaySettings: holidaySettings,
       holidaySchedule: holidaySchedule,
+      showNonCurrentWeekCourses: showNonCurrentWeekCourses,
       dayLabels: dayLabels,
       weekLabelFor: (course) => _weekLabelForImage(l10n, course),
       weekTitleFor: l10n.weekNumber,
@@ -512,6 +553,7 @@ Future<Uint8List> _renderWeekPng({
   required String monthLabel,
   required Iterable<CourseSlot> courses,
   required Set<String> holidayMutedCourseIds,
+  required Set<String> nonCurrentWeekCourseIds,
   required List<String> dayLabels,
   required List<DateTime> dates,
   required List<bool> holidayRestDays,
@@ -735,11 +777,15 @@ Future<Uint8List> _renderWeekPng({
       const Radius.circular(8),
     );
     final mutedByHoliday = holidayMutedCourseIds.contains(course.id);
-    final blockColor = mutedByHoliday
+    final outsideCurrentWeek = nonCurrentWeekCourseIds.contains(course.id);
+    final baseBlockColor = mutedByHoliday
         ? _holidayMutedCourseColor(colorScheme)
         : course.color;
+    final blockColor = outsideCurrentWeek
+        ? _nonCurrentWeekExportCourseColor(baseBlockColor, colorScheme)
+        : baseBlockColor;
     canvas.drawRRect(rect, Paint()..color = blockColor);
-    if (mutedByHoliday) {
+    if (mutedByHoliday || outsideCurrentWeek) {
       canvas.drawRRect(
         rect.deflate(0.5),
         Paint()
@@ -750,7 +796,9 @@ Future<Uint8List> _renderWeekPng({
     }
     canvas.save();
     canvas.clipRRect(rect);
-    final textColor = mutedByHoliday
+    final textColor = outsideCurrentWeek
+        ? _grayscaleColor(colorScheme.onSurfaceVariant)
+        : mutedByHoliday
         ? colorScheme.onSurfaceVariant
         : readableCourseTextColor(course.color);
     var cursorY = y + 6;
@@ -802,6 +850,7 @@ Future<Uint8List> _renderSemesterPng({
   required List<CourseSlot> courses,
   required HolidaySettings holidaySettings,
   required ChinaHolidaySchedule holidaySchedule,
+  required bool showNonCurrentWeekCourses,
   required List<String> dayLabels,
   required String Function(CourseSlot course) weekLabelFor,
   required String Function(int week) weekTitleFor,
@@ -810,7 +859,9 @@ Future<Uint8List> _renderSemesterPng({
   for (final week in weeks) {
     final dates = _datesForWeek(firstWeekMonday: firstWeekMonday, week: week);
     final visibleCourses = courses
-        .where((course) => course.isActiveInWeek(week))
+        .where(
+          (course) => showNonCurrentWeekCourses || course.isActiveInWeek(week),
+        )
         .where(
           (course) => !_isHiddenByHoliday(
             course: course,
@@ -833,6 +884,10 @@ Future<Uint8List> _renderSemesterPng({
         settings: holidaySettings,
         schedule: holidaySchedule,
       ),
+      nonCurrentWeekCourseIds: {
+        for (final course in visibleCourses)
+          if (!course.isActiveInWeek(week)) course.id,
+      },
       dayLabels: dayLabels,
       holidayRestDays: holidayRestDayFlags(
         dates: dates,
@@ -1430,6 +1485,25 @@ Color _holidayMutedCourseColor(ColorScheme colorScheme) {
   );
 }
 
+Color _nonCurrentWeekExportCourseColor(Color color, ColorScheme colorScheme) {
+  return Color.alphaBlend(
+    colorScheme.surface.withValues(
+      alpha: colorScheme.brightness == Brightness.light ? 0.22 : 0.14,
+    ),
+    _grayscaleColor(color),
+  );
+}
+
+Color _grayscaleColor(Color color) {
+  final gray = color.r * 0.2126 + color.g * 0.7152 + color.b * 0.0722;
+  return Color.fromARGB(
+    (color.a * 255).round(),
+    (gray * 255).round(),
+    (gray * 255).round(),
+    (gray * 255).round(),
+  );
+}
+
 String _weekLabelForImage(AppLocalizations l10n, CourseSlot course) {
   final base = l10n.weeksValue(course.startWeek, course.endWeek);
   return switch (course.parity) {
@@ -1535,6 +1609,59 @@ Offset _alignedExportTextOffset({
   return Offset(dx, offset.dy);
 }
 
+class _ExportDisplaySettingsCard extends ConsumerWidget {
+  const _ExportDisplaySettingsCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final setting = ref.watch(showNonCurrentWeekCoursesInExportProvider);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.tune_outlined, size: 28),
+                const SizedBox(width: 16),
+                Text(
+                  context.l10n.exportDisplaySettings,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
+            setting.when(
+              loading: () => const ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: LinearProgressIndicator(),
+              ),
+              error: (error, stackTrace) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.error_outline),
+                title: Text(
+                  context.l10n.failedToLoadExportDisplaySetting(error),
+                ),
+              ),
+              data: (enabled) => SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: enabled,
+                onChanged: (value) => ref
+                    .read(showNonCurrentWeekCoursesInExportProvider.notifier)
+                    .setEnabled(value),
+                title: Text(context.l10n.showNonCurrentWeekCourses),
+                subtitle: Text(
+                  context.l10n.showNonCurrentWeekCoursesInExportSubtitle,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ExportOptionCard extends StatelessWidget {
   const _ExportOptionCard({
     required this.icon,
@@ -1542,6 +1669,7 @@ class _ExportOptionCard extends StatelessWidget {
     required this.subtitle,
     required this.actionLabel,
     required this.busy,
+    required this.desktopTile,
     required this.onPressed,
   });
 
@@ -1550,6 +1678,7 @@ class _ExportOptionCard extends StatelessWidget {
   final String subtitle;
   final String actionLabel;
   final bool busy;
+  final bool desktopTile;
   final VoidCallback? onPressed;
 
   @override
@@ -1557,42 +1686,94 @@ class _ExportOptionCard extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 28),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
+        child: desktopTile
+            ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 6),
-                  Text(subtitle),
+                  Row(
+                    children: [
+                      Icon(icon, size: 28),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(child: Text(subtitle)),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: _ExportActionButton(
+                      busy: busy,
+                      actionLabel: actionLabel,
+                      onPressed: onPressed,
+                    ),
+                  ),
+                ],
+              )
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(icon, size: 28),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(subtitle),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  _ExportActionButton(
+                    busy: busy,
+                    actionLabel: actionLabel,
+                    onPressed: onPressed,
+                  ),
                 ],
               ),
-            ),
-            const SizedBox(width: 12),
-            FilledButton.tonal(
-              onPressed: onPressed,
-              child: AnimatedSwitcher(
-                duration: appMicroMotionDuration,
-                switchInCurve: appMicroMotionCurve,
-                switchOutCurve: appMicroMotionReverseCurve,
-                child: busy
-                    ? SizedBox.square(
-                        key: const ValueKey('busy'),
-                        dimension: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.4,
-                          semanticsLabel: context.l10n.preparingExport,
-                        ),
-                      )
-                    : Text(actionLabel, key: const ValueKey('label')),
-              ),
-            ),
-          ],
-        ),
+      ),
+    );
+  }
+}
+
+class _ExportActionButton extends StatelessWidget {
+  const _ExportActionButton({
+    required this.busy,
+    required this.actionLabel,
+    required this.onPressed,
+  });
+
+  final bool busy;
+  final String actionLabel;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton.tonal(
+      onPressed: onPressed,
+      child: AnimatedSwitcher(
+        duration: appMicroMotionDuration,
+        switchInCurve: appMicroMotionCurve,
+        switchOutCurve: appMicroMotionReverseCurve,
+        child: busy
+            ? SizedBox.square(
+                key: const ValueKey('busy'),
+                dimension: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.4,
+                  semanticsLabel: context.l10n.preparingExport,
+                ),
+              )
+            : Text(actionLabel, key: const ValueKey('label')),
       ),
     );
   }

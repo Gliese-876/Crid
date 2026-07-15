@@ -208,6 +208,35 @@ void main() {
       expect(visualOffset.$2.abs(), lessThanOrEqualTo(14));
     },
   );
+
+  test('Windows runner, MSIX, and toast notifications use Crid assets', () {
+    final pubspec = File('pubspec.yaml').readAsStringSync();
+    final runnerResources = File('windows/runner/Runner.rc').readAsStringSync();
+    final notificationConfig = File(
+      'lib/features/reminder/data/notification_platform_config.dart',
+    ).readAsStringSync();
+    final windowsRunner = File(
+      'windows/runner/flutter_window.cpp',
+    ).readAsStringSync();
+
+    expect(File('windows/runner/resources/app_icon.ico').existsSync(), isTrue);
+    expect(runnerResources, contains('app_icon.ico'));
+    expect(
+      pubspec,
+      contains(
+        'logo_path: android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png',
+      ),
+    );
+    expect(pubspec, contains('toast_activator:'));
+    expect(
+      pubspec,
+      contains('file_extension: .ics, .xls, .mht, .mhtml, .pdf, .txt'),
+    );
+    expect(pubspec, contains('clsid: "6f338c02-cb02-4d1d-8e6f-10a02e7c7ac3"'));
+    expect(notificationConfig, contains('ic_launcher_foreground.png'));
+    expect(windowsRunner, contains('app.crid/windows_runtime'));
+    expect(windowsRunner, contains('ms-settings:notifications'));
+  });
 }
 
 (int width, int height) _pngSize(List<int> bytes) {

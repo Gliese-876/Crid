@@ -10,6 +10,7 @@ import 'package:crid/features/export/data/ics_export_service.dart';
 import 'package:crid/features/reminder/data/local_notification_reminder_scheduler.dart';
 import 'package:crid/features/reminder/domain/reminder_window.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:icalendar_parser/icalendar_parser.dart';
 import 'package:image/image.dart' as img;
@@ -234,6 +235,26 @@ void main() {
     expect(androidDetails.channelName, 'Class reminders without sound');
     expect(androidDetails.playSound, isFalse);
     expect(androidDetails.enableVibration, isTrue);
+  });
+
+  test('Windows reminder maps mute and DND options to native toast fields', () {
+    final reminder = buildRollingReminderWindow(
+      sessions: [session],
+      firstWeekMonday: DateTime(2026, 2, 23),
+      now: DateTime(2026, 2, 23, 7, 30),
+      minutesBefore: 20,
+    ).first;
+
+    final windowsDetails = reminderNotificationDetailsFor(
+      reminder,
+      ignoreDoNotDisturb: true,
+      vibrateOnly: true,
+    ).windows!;
+
+    expect(windowsDetails.audio?.isSilent, isTrue);
+    expect(windowsDetails.duration, WindowsNotificationDuration.long);
+    expect(windowsDetails.scenario, WindowsNotificationScenario.urgent);
+    expect(windowsDetails.timestamp, reminder.startAt);
   });
 
   test('semester image export stops at the last active course week', () {

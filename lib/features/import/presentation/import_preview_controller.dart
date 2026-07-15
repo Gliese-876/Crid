@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
 
 import '../../../app/app_state.dart';
 import '../../../core/file/import_file_type_detector.dart';
@@ -54,12 +55,27 @@ class ImportPreviewController extends AsyncNotifier<ImportPreviewState> {
       return;
     }
 
+    final file = result.files.single;
+    final bytes = file.bytes ?? await File(file.path!).readAsBytes();
+    await loadBytes(sourceName: file.name, bytes: bytes);
+  }
+
+  Future<void> loadFilePath(String path) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final file = result.files.single;
-      final bytes = file.bytes ?? await File(file.path!).readAsBytes();
-      return _buildPreview(sourceName: file.name, bytes: bytes);
+      final bytes = await File(path).readAsBytes();
+      return _buildPreview(sourceName: p.basename(path), bytes: bytes);
     });
+  }
+
+  Future<void> loadBytes({
+    required String sourceName,
+    required List<int> bytes,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(
+      () => _buildPreview(sourceName: sourceName, bytes: bytes),
+    );
   }
 
   Future<void> pasteExamText(String text) async {

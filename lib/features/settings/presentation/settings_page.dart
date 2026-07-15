@@ -4,12 +4,16 @@ import 'package:crid/app/motion.dart';
 import 'package:crid/app/theme_controller.dart';
 import 'package:crid/features/settings/data/android_background_service.dart';
 import 'package:crid/features/settings/data/china_holiday_service.dart';
+import 'package:crid/features/settings/data/export_display_settings_controller.dart';
 import 'package:crid/features/settings/data/holiday_settings_controller.dart';
 import 'package:crid/features/settings/data/local_backup_service.dart';
+import 'package:crid/features/settings/data/timetable_display_settings_controller.dart';
+import 'package:crid/features/settings/data/windows_reminder_service.dart';
 import 'package:crid/features/settings/presentation/third_party_licenses_page.dart';
 import 'package:crid/features/timetable/data/timetable_repository.dart';
 import 'package:crid/l10n/l10n.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -24,87 +28,159 @@ class SettingsPage extends ConsumerWidget {
     final settings = ref.watch(reminderSettingsProvider);
     final localeMode = ref.watch(localeControllerProvider);
     final themeMode = ref.watch(themeControllerProvider);
+    final showNonCurrentWeekCourses = ref.watch(
+      showNonCurrentWeekCoursesProvider,
+    );
     final androidBackgroundStatus = ref.watch(
       androidBackgroundRuntimeControllerProvider,
     );
+    final isWindows = defaultTargetPlatform == TargetPlatform.windows;
+    final windowsReminderStatus = isWindows
+        ? ref.watch(windowsReminderStatusProvider)
+        : null;
     final holidaySettings = ref.watch(holidaySettingsProvider);
     final holidaySchedule = ref.watch(
       chinaHolidayScheduleProvider(DateTime.now().year),
     );
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      children: [
-        settings.when(
-          loading: () => const Card(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          ),
-          error: (error, stackTrace) => Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(context.l10n.failedToLoadReminderSettings(error)),
-            ),
-          ),
-          data: (value) => _ReminderCard(settings: value),
+    final reminderSection = settings.when(
+      loading: _loadingSettingsCard,
+      error: (error, stackTrace) => _SettingsErrorCard(
+        message: context.l10n.failedToLoadReminderSettings(error),
+      ),
+      data: (value) => _ReminderCard(settings: value),
+    );
+    final runtimeSection = isWindows
+        ? _WindowsReminderCard(status: windowsReminderStatus!)
+        : _AndroidBackgroundCard(status: androidBackgroundStatus);
+    final languageSection = localeMode.when(
+      loading: _loadingSettingsCard,
+      error: (error, stackTrace) => _SettingsErrorCard(
+        message: context.l10n.failedToLoadLanguageSetting(error),
+      ),
+      data: (value) => _LanguageCard(mode: value),
+    );
+    final holidaySection = holidaySettings.when(
+      loading: _loadingSettingsCard,
+      error: (error, stackTrace) => _SettingsErrorCard(
+        message: context.l10n.failedToLoadHolidaySettings(error),
+      ),
+      data: (value) =>
+          _HolidayModeCard(settings: value, schedule: holidaySchedule),
+    );
+    final displaySection = themeMode.when(
+      loading: _loadingSettingsCard,
+      error: (error, stackTrace) => _SettingsErrorCard(
+        message: context.l10n.failedToLoadThemeSetting(error),
+      ),
+      data: (value) => showNonCurrentWeekCourses.when(
+        loading: _loadingSettingsCard,
+        error: (error, stackTrace) => _SettingsErrorCard(
+          message: context.l10n.failedToLoadTimetableDisplaySetting(error),
         ),
-        const SizedBox(height: 12),
-        _AndroidBackgroundCard(status: androidBackgroundStatus),
-        const SizedBox(height: 12),
-        localeMode.when(
-          loading: () => const Card(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          ),
-          error: (error, stackTrace) => Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(context.l10n.failedToLoadLanguageSetting(error)),
-            ),
-          ),
-          data: (value) => _LanguageCard(mode: value),
+        data: (showNonCurrentWeekCourses) => _DisplaySettingsCard(
+          themeMode: value,
+          showNonCurrentWeekCourses: showNonCurrentWeekCourses,
         ),
-        const SizedBox(height: 12),
-        holidaySettings.when(
-          loading: () => const Card(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          ),
-          error: (error, stackTrace) => Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(context.l10n.failedToLoadHolidaySettings(error)),
-            ),
-          ),
-          data: (value) =>
-              _HolidayModeCard(settings: value, schedule: holidaySchedule),
-        ),
-        const SizedBox(height: 12),
-        themeMode.when(
-          loading: () => const Card(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          ),
-          error: (error, stackTrace) => Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(context.l10n.failedToLoadThemeSetting(error)),
-            ),
-          ),
-          data: (value) => _ThemeModeCard(mode: value),
-        ),
-        const SizedBox(height: 12),
+      ),
+    );
+
+    return _SettingsContentLayout(
+      primarySections: [reminderSection, runtimeSection, displaySection],
+      secondarySections: [
+        languageSection,
+        holidaySection,
         const _InformationCard(),
       ],
     );
   }
+}
+
+Widget _loadingSettingsCard() {
+  return const Card(
+    child: Padding(
+      padding: EdgeInsets.all(24),
+      child: Center(child: CircularProgressIndicator()),
+    ),
+  );
+}
+
+class _SettingsErrorCard extends StatelessWidget {
+  const _SettingsErrorCard({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(padding: const EdgeInsets.all(16), child: Text(message)),
+    );
+  }
+}
+
+class _SettingsContentLayout extends StatelessWidget {
+  const _SettingsContentLayout({
+    required this.primarySections,
+    required this.secondarySections,
+  });
+
+  final List<Widget> primarySections;
+  final List<Widget> secondarySections;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 900) {
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            children: _withSectionSpacing([
+              primarySections[0],
+              primarySections[1],
+              secondarySections[0],
+              secondarySections[1],
+              primarySections[2],
+              secondarySections[2],
+            ]),
+          );
+        }
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _SettingsColumn(sections: primarySections)),
+              const SizedBox(width: 20),
+              Expanded(child: _SettingsColumn(sections: secondarySections)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SettingsColumn extends StatelessWidget {
+  const _SettingsColumn({required this.sections});
+
+  final List<Widget> sections;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: _withSectionSpacing(sections),
+    );
+  }
+}
+
+List<Widget> _withSectionSpacing(List<Widget> sections) {
+  return [
+    for (var index = 0; index < sections.length; index++) ...[
+      if (index > 0) const SizedBox(height: 12),
+      sections[index],
+    ],
+  ];
 }
 
 class _InformationCard extends StatefulWidget {
@@ -255,6 +331,8 @@ class _LocalDataActionsState extends ConsumerState<_LocalDataActions> {
       ref.invalidate(localeControllerProvider);
       ref.invalidate(themeControllerProvider);
       ref.invalidate(holidaySettingsProvider);
+      ref.invalidate(showNonCurrentWeekCoursesProvider);
+      ref.invalidate(showNonCurrentWeekCoursesInExportProvider);
       if (!mounted) {
         return;
       }
@@ -401,10 +479,79 @@ class _AndroidBackgroundSection extends ConsumerWidget {
   }
 }
 
-class _ThemeModeCard extends ConsumerWidget {
-  const _ThemeModeCard({required this.mode});
+class _WindowsReminderCard extends ConsumerWidget {
+  const _WindowsReminderCard({required this.status});
 
-  final AppThemeMode mode;
+  final AsyncValue<WindowsReminderStatus> status;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              context.l10n.windowsReminderSettings,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              context.l10n.windowsReminderSettingsSubtitle,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 8),
+            status.when(
+              loading: () => const ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.notifications_outlined),
+                title: LinearProgressIndicator(),
+              ),
+              error: (error, stackTrace) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.error_outline),
+                title: Text(context.l10n.windowsSystemNotifications),
+                subtitle: Text(
+                  context.l10n.failedToLoadWindowsReminderStatus(error),
+                ),
+              ),
+              data: (value) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  value.notificationsAllowed
+                      ? Icons.notifications_active_outlined
+                      : Icons.notifications_off_outlined,
+                ),
+                title: Text(context.l10n.windowsSystemNotifications),
+                subtitle: Text(
+                  value.notificationsAllowed
+                      ? context.l10n.windowsNotificationsAllowed
+                      : context.l10n.windowsNotificationsBlocked,
+                ),
+                trailing: OutlinedButton(
+                  onPressed: () => ref
+                      .read(windowsReminderServiceProvider)
+                      .openNotificationSettings(),
+                  child: Text(context.l10n.openNotificationSettings),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DisplaySettingsCard extends ConsumerWidget {
+  const _DisplaySettingsCard({
+    required this.themeMode,
+    required this.showNonCurrentWeekCourses,
+  });
+
+  final AppThemeMode themeMode;
+  final bool showNonCurrentWeekCourses;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -418,8 +565,18 @@ class _ThemeModeCard extends ConsumerWidget {
               context.l10n.display,
               style: Theme.of(context).textTheme.titleMedium,
             ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: showNonCurrentWeekCourses,
+              onChanged: (value) => ref
+                  .read(showNonCurrentWeekCoursesProvider.notifier)
+                  .setEnabled(value),
+              title: Text(context.l10n.showNonCurrentWeekCourses),
+              subtitle: Text(context.l10n.showNonCurrentWeekCoursesSubtitle),
+            ),
+            const Divider(),
             RadioGroup<AppThemeMode>(
-              groupValue: mode,
+              groupValue: themeMode,
               onChanged: (value) => _setMode(ref, value),
               child: Column(
                 children: [
@@ -448,7 +605,7 @@ class _ThemeModeCard extends ConsumerWidget {
   }
 
   void _setMode(WidgetRef ref, AppThemeMode? value) {
-    if (value == null || value == mode) {
+    if (value == null || value == themeMode) {
       return;
     }
     ref.read(themeControllerProvider.notifier).setMode(value);
@@ -1111,6 +1268,7 @@ class _ReminderCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isWindows = defaultTargetPlatform == TargetPlatform.windows;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1155,7 +1313,11 @@ class _ReminderCard extends ConsumerWidget {
                           )
                         : null,
                     title: Text(context.l10n.ignoreDoNotDisturb),
-                    subtitle: Text(context.l10n.ignoreDoNotDisturbSubtitle),
+                    subtitle: Text(
+                      isWindows
+                          ? context.l10n.windowsIgnoreDoNotDisturbSubtitle
+                          : context.l10n.ignoreDoNotDisturbSubtitle,
+                    ),
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
@@ -1165,7 +1327,11 @@ class _ReminderCard extends ConsumerWidget {
                               _save(ref, settings.copyWith(vibrateOnly: value))
                         : null,
                     title: Text(context.l10n.vibrateReminder),
-                    subtitle: Text(context.l10n.vibrateReminderSubtitle),
+                    subtitle: Text(
+                      isWindows
+                          ? context.l10n.windowsMuteReminderSoundSubtitle
+                          : context.l10n.vibrateReminderSubtitle,
+                    ),
                   ),
                 ],
               ),

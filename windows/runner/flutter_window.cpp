@@ -1,8 +1,37 @@
 #include "flutter_window.h"
 
+#include <appmodel.h>
+#include <shellapi.h>
+#include <winrt/Windows.UI.Notifications.h>
+
 #include <optional>
 
 #include "flutter/generated_plugin_registrant.h"
+#include "utils.h"
+
+namespace {
+
+constexpr wchar_t kNotificationAppUserModelId[] = L"Crid.App";
+
+bool HasPackageIdentity() {
+  UINT32 package_name_length = 0;
+  const LONG result =
+      GetCurrentPackageFullName(&package_name_length, nullptr);
+  return result != APPMODEL_ERROR_NO_PACKAGE;
+}
+
+bool AreNotificationsAllowed() {
+  using winrt::Windows::UI::Notifications::NotificationSetting;
+  using winrt::Windows::UI::Notifications::ToastNotificationManager;
+
+  const auto notifier = HasPackageIdentity()
+                            ? ToastNotificationManager::CreateToastNotifier()
+                            : ToastNotificationManager::CreateToastNotifier(
+                                  kNotificationAppUserModelId);
+  return notifier.Setting() == NotificationSetting::Enabled;
+}
+
+}  // namespace
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -25,6 +54,45 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
+
+  windows_runtime_channel_ = std::make_unique<
+      flutter::MethodChannel<flutter::EncodableValue>>(
+      flutter_controller_->engine()->messenger(), "app.crid/windows_runtime",
+      &flutter::StandardMethodCodec::GetInstance());
+  windows_runtime_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
+                 result) {
+        if (call.method_name() == "getStatus") {
+          try {
+            flutter::EncodableMap status;
+            status[flutter::EncodableValue("available")] =
+                flutter::EncodableValue(true);
+            status[flutter::EncodableValue("notificationsAllowed")] =
+                flutter::EncodableValue(AreNotificationsAllowed());
+            result->Success(flutter::EncodableValue(status));
+          } catch (const winrt::hresult_error& error) {
+            result->Error("windows_notification_status_failed",
+                          Utf8FromUtf16(error.message().c_str()));
+          }
+          return;
+        }
+
+        if (call.method_name() == "openNotificationSettings") {
+          const HINSTANCE launch_result =
+              ShellExecuteW(GetHandle(), L"open", L"ms-settings:notifications",
+                            nullptr, nullptr, SW_SHOWNORMAL);
+          if (reinterpret_cast<INT_PTR>(launch_result) <= 32) {
+            result->Error("windows_settings_launch_failed",
+                          "Windows notification settings could not be opened.");
+          } else {
+            result->Success();
+          }
+          return;
+        }
+
+        result->NotImplemented();
+      });
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
@@ -40,6 +108,7 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  windows_runtime_channel_.reset();
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }

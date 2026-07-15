@@ -455,12 +455,32 @@
       }
     }
   },
+  "failedToLoadTimetableDisplaySetting": "Failed to load timetable display setting: {error}",
+  "@failedToLoadTimetableDisplaySetting": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "failedToLoadExportDisplaySetting": "Failed to load export display setting: {error}",
+  "@failedToLoadExportDisplaySetting": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
   "language": "Language",
   "languageSystem": "Follow system",
   "languageSimplifiedChinese": "Simplified Chinese",
   "languageTraditionalChinese": "Traditional Chinese",
   "languageEnglish": "English",
   "display": "Display",
+  "showNonCurrentWeekCourses": "Show courses outside the current week",
+  "showNonCurrentWeekCoursesSubtitle": "Courses not held in the selected week appear in gray on the timetable.",
+  "exportDisplaySettings": "Export display",
+  "showNonCurrentWeekCoursesInExportSubtitle": "Courses not held in each week appear in gray in weekly and full-semester PNG exports.",
   "themeModeSystem": "Follow system",
   "themeModeLight": "Light",
   "themeModeDark": "Dark",
@@ -529,6 +549,19 @@
       }
     }
   },
+  "windowsReminderSettings": "Windows reminders",
+  "windowsReminderSettingsSubtitle": "Windows schedules enabled reminders with the system, so Crid does not need to remain open.",
+  "windowsSystemNotifications": "System notifications",
+  "windowsNotificationsAllowed": "Enabled. Scheduled reminders can appear after Crid is closed.",
+  "windowsNotificationsBlocked": "Notifications are disabled in Windows. Enable them in system settings to receive course reminders.",
+  "failedToLoadWindowsReminderStatus": "Failed to load Windows reminder status: {error}",
+  "@failedToLoadWindowsReminderStatus": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
   "persistentBackgroundRuntime": "Continuous background running",
   "persistentBackgroundRuntimeSubtitle": "Shows a silent ongoing notification in the notification shade to maintain background reminder tasks.",
   "persistentBackgroundRuntimeAllowed": "Battery optimization exemption is enabled, reducing the effect of system battery limits on background tasks.",
@@ -551,8 +584,10 @@
   "minutesUnit": "min",
   "ignoreDoNotDisturb": "Bypass Do Not Disturb",
   "ignoreDoNotDisturbSubtitle": "Android opens a system access page; after approval, the reminder channel can bypass DND.",
+  "windowsIgnoreDoNotDisturbSubtitle": "Windows marks course reminders as urgent so they can break through Do Not Disturb.",
   "vibrateReminder": "Mute reminder sound",
   "vibrateReminderSubtitle": "Class reminders still vibrate, but no sound is played.",
+  "windowsMuteReminderSoundSubtitle": "Windows shows course reminders silently; vibration depends on the device and system settings.",
   "goToToday": "Today",
   "delete": "Delete",
   "save": "Save",

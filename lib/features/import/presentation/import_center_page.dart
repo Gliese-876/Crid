@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:crid/app/launch_activation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
@@ -9,21 +12,76 @@ import '../domain/parsed_exam_schedule.dart';
 import '../domain/parsed_timetable.dart';
 import 'import_preview_controller.dart';
 
-class ImportCenterPage extends ConsumerWidget {
+class ImportCenterPage extends ConsumerStatefulWidget {
   const ImportCenterPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ImportCenterPage> createState() => _ImportCenterPageState();
+}
+
+class _ImportCenterPageState extends ConsumerState<ImportCenterPage> {
+  var _launchFileHandled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadLaunchFile());
+  }
+
+  void _loadLaunchFile() {
+    if (!mounted || _launchFileHandled) {
+      return;
+    }
+    _launchFileHandled = true;
+    final path = launchImportFilePath(ref.read(launchArgumentsProvider));
+    if (path == null) {
+      return;
+    }
+    unawaited(
+      ref.read(importPreviewControllerProvider.notifier).loadFilePath(path),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final preview = ref.watch(importPreviewControllerProvider);
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      children: [
-        _ImportSourceCard(preview: preview),
-        const SizedBox(height: 16),
-        _PreviewCard(preview: preview),
-        const SizedBox(height: 16),
-        const _ImportHistoryCard(),
-      ],
+    final sourceCard = _ImportSourceCard(preview: preview);
+    final previewCard = _PreviewCard(preview: preview);
+    const historyCard = _ImportHistoryCard();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 900;
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          child: isWide
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 4,
+                      child: Column(
+                        children: [
+                          sourceCard,
+                          const SizedBox(height: 16),
+                          historyCard,
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(flex: 6, child: previewCard),
+                  ],
+                )
+              : Column(
+                  children: [
+                    sourceCard,
+                    const SizedBox(height: 16),
+                    previewCard,
+                    const SizedBox(height: 16),
+                    historyCard,
+                  ],
+                ),
+        );
+      },
     );
   }
 }

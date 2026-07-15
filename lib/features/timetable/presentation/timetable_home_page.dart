@@ -8,6 +8,7 @@ import 'package:crid/core/time/period.dart';
 import 'package:crid/core/theme/course_colors.dart';
 import 'package:crid/features/settings/data/china_holiday_service.dart';
 import 'package:crid/features/settings/data/holiday_settings_controller.dart';
+import 'package:crid/features/settings/data/timetable_display_settings_controller.dart';
 import 'package:crid/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -86,6 +87,8 @@ class _TimetableHomePageState extends ConsumerState<TimetableHomePage> {
             .asData
             ?.value ??
         ChinaHolidaySchedule.empty(firstWeekMonday.year);
+    final showNonCurrentWeekCourses =
+        ref.watch(showNonCurrentWeekCoursesProvider).asData?.value ?? false;
     final List<CourseSlot> courses =
         snapshotData?.courses ?? ref.watch(sampleCoursesProvider);
     final todayWeek = weekNumberForDate(
@@ -140,6 +143,7 @@ class _TimetableHomePageState extends ConsumerState<TimetableHomePage> {
                     firstWeekMonday: firstWeekMonday,
                     holidaySettings: holidaySettings,
                     holidaySchedule: holidaySchedule,
+                    showNonCurrentWeekCourses: showNonCurrentWeekCourses,
                     semesterId: snapshotData?.activeSemester.id,
                     selectedWeekOverride:
                         isSyncingActiveSemester && currentWeek != null
@@ -272,13 +276,14 @@ bool _isMutedByHoliday({
 int? _earliestCourseStartMinute({
   required List<CourseSlot> courses,
   required int week,
+  required bool showNonCurrentWeekCourses,
   required List<DateTime> dates,
   required HolidaySettings settings,
   required ChinaHolidaySchedule schedule,
 }) {
   int? earliest;
   for (final course in courses) {
-    if (!course.isActiveInWeek(week) ||
+    if ((!showNonCurrentWeekCourses && !course.isActiveInWeek(week)) ||
         _isHiddenByHoliday(
           course: course,
           dates: dates,
@@ -307,6 +312,7 @@ class _TimetableGrid extends ConsumerStatefulWidget {
     required this.firstWeekMonday,
     required this.holidaySettings,
     required this.holidaySchedule,
+    required this.showNonCurrentWeekCourses,
     required this.semesterId,
     required this.selectedWeekOverride,
     required this.autoScrollRequest,
@@ -318,6 +324,7 @@ class _TimetableGrid extends ConsumerStatefulWidget {
   final DateTime firstWeekMonday;
   final HolidaySettings holidaySettings;
   final ChinaHolidaySchedule holidaySchedule;
+  final bool showNonCurrentWeekCourses;
   final int? semesterId;
   final int? selectedWeekOverride;
   final int autoScrollRequest;
@@ -389,6 +396,8 @@ class _TimetableGridState extends ConsumerState<_TimetableGrid> {
     return !identical(widget.courses, oldWidget.courses) ||
         widget.firstWeekMonday != oldWidget.firstWeekMonday ||
         widget.holidaySettings != oldWidget.holidaySettings ||
+        widget.showNonCurrentWeekCourses !=
+            oldWidget.showNonCurrentWeekCourses ||
         !identical(widget.holidaySchedule, oldWidget.holidaySchedule);
   }
 
@@ -409,9 +418,12 @@ class _TimetableGridState extends ConsumerState<_TimetableGrid> {
       settings: widget.holidaySettings,
       schedule: widget.holidaySchedule,
     );
-    final activeCourses = List<CourseSlot>.unmodifiable(
+    final visibleCourses = List<CourseSlot>.unmodifiable(
       widget.courses
-          .where((course) => course.isActiveInWeek(week))
+          .where(
+            (course) =>
+                widget.showNonCurrentWeekCourses || course.isActiveInWeek(week),
+          )
           .where(
             (course) => !_isHiddenByHoliday(
               course: course,
@@ -422,7 +434,7 @@ class _TimetableGridState extends ConsumerState<_TimetableGrid> {
           ),
     );
     final holidayMutedCourseIds = {
-      for (final course in activeCourses)
+      for (final course in visibleCourses)
         if (_isMutedByHoliday(
           course: course,
           dates: dates,
@@ -431,12 +443,17 @@ class _TimetableGridState extends ConsumerState<_TimetableGrid> {
         ))
           course.id,
     };
+    final nonCurrentWeekCourseIds = {
+      for (final course in visibleCourses)
+        if (!course.isActiveInWeek(week)) course.id,
+    };
     return _WeekGridData(
       week: week,
       dates: List.unmodifiable(dates),
       holidayRestDays: List.unmodifiable(holidayRestDays),
       holidayMutedCourseIds: Set.unmodifiable(holidayMutedCourseIds),
-      layouts: List.unmodifiable(_courseBlockLayouts(activeCourses)),
+      nonCurrentWeekCourseIds: Set.unmodifiable(nonCurrentWeekCourseIds),
+      layouts: List.unmodifiable(_courseBlockLayouts(visibleCourses)),
     );
   }
 
@@ -568,6 +585,8 @@ class _TimetableGridState extends ConsumerState<_TimetableGrid> {
                                       holidayRestDays: weekData.holidayRestDays,
                                       holidayMutedCourseIds:
                                           weekData.holidayMutedCourseIds,
+                                      nonCurrentWeekCourseIds:
+                                          weekData.nonCurrentWeekCourseIds,
                                       width: gridWidth - gutterWidth,
                                       dayWidth: dayWidth,
                                       hourHeight: hourHeight,
@@ -624,6 +643,7 @@ class _TimetableGridState extends ConsumerState<_TimetableGrid> {
     final earliestMinute = _earliestCourseStartMinute(
       courses: widget.courses,
       week: selectedWeek,
+      showNonCurrentWeekCourses: widget.showNonCurrentWeekCourses,
       dates: _datesForWeek(
         firstWeekMonday: widget.firstWeekMonday,
         week: selectedWeek,
@@ -652,6 +672,7 @@ class _TimetableGridState extends ConsumerState<_TimetableGrid> {
     final earliestMinute = _earliestCourseStartMinute(
       courses: widget.courses,
       week: week,
+      showNonCurrentWeekCourses: widget.showNonCurrentWeekCourses,
       dates: _datesForWeek(firstWeekMonday: widget.firstWeekMonday, week: week),
       settings: widget.holidaySettings,
       schedule: widget.holidaySchedule,
@@ -790,6 +811,7 @@ class _WeekGridData {
     required this.dates,
     required this.holidayRestDays,
     required this.holidayMutedCourseIds,
+    required this.nonCurrentWeekCourseIds,
     required this.layouts,
   });
 
@@ -797,6 +819,7 @@ class _WeekGridData {
   final List<DateTime> dates;
   final List<bool> holidayRestDays;
   final Set<String> holidayMutedCourseIds;
+  final Set<String> nonCurrentWeekCourseIds;
   final List<_CourseBlockLayout> layouts;
 }
 
@@ -806,6 +829,7 @@ class _TimetableGridPage extends StatefulWidget {
     required this.layouts,
     required this.holidayRestDays,
     required this.holidayMutedCourseIds,
+    required this.nonCurrentWeekCourseIds,
     required this.width,
     required this.dayWidth,
     required this.hourHeight,
@@ -816,6 +840,7 @@ class _TimetableGridPage extends StatefulWidget {
   final List<_CourseBlockLayout> layouts;
   final List<bool> holidayRestDays;
   final Set<String> holidayMutedCourseIds;
+  final Set<String> nonCurrentWeekCourseIds;
   final double width;
   final double dayWidth;
   final double hourHeight;
@@ -857,6 +882,9 @@ class _TimetableGridPageState extends State<_TimetableGridPage>
               hourHeight: widget.hourHeight,
               compact: widget.compact,
               mutedByHoliday: widget.holidayMutedCourseIds.contains(
+                layout.course.id,
+              ),
+              outsideCurrentWeek: widget.nonCurrentWeekCourseIds.contains(
                 layout.course.id,
               ),
               onTap: () => widget.onCourseSelected(layout.course),
@@ -1246,6 +1274,7 @@ class _CalendarCourseBlock extends StatelessWidget {
     required this.hourHeight,
     required this.compact,
     required this.mutedByHoliday,
+    required this.outsideCurrentWeek,
     required this.onTap,
   });
 
@@ -1257,6 +1286,7 @@ class _CalendarCourseBlock extends StatelessWidget {
   final double hourHeight;
   final bool compact;
   final bool mutedByHoliday;
+  final bool outsideCurrentWeek;
   final VoidCallback onTap;
 
   @override
@@ -1304,6 +1334,7 @@ class _CalendarCourseBlock extends StatelessWidget {
         course: course,
         compact: compact,
         mutedByHoliday: mutedByHoliday,
+        outsideCurrentWeek: outsideCurrentWeek,
         onTap: onTap,
       ),
     );
@@ -1390,12 +1421,14 @@ class _CourseCard extends StatelessWidget {
     required this.course,
     required this.compact,
     required this.mutedByHoliday,
+    required this.outsideCurrentWeek,
     required this.onTap,
   });
 
   final CourseSlot course;
   final bool compact;
   final bool mutedByHoliday;
+  final bool outsideCurrentWeek;
   final VoidCallback onTap;
 
   @override
@@ -1404,7 +1437,7 @@ class _CourseCard extends StatelessWidget {
     final backgroundColor = mutedByHoliday
         ? _holidayMutedCourseColor(colorScheme)
         : course.color;
-    final textColor = mutedByHoliday
+    final textColor = mutedByHoliday || outsideCurrentWeek
         ? colorScheme.onSurfaceVariant
         : readableCourseTextColor(course.color);
     const borderRadius = BorderRadius.all(Radius.circular(8));
@@ -1414,14 +1447,14 @@ class _CourseCard extends StatelessWidget {
       course.teacher,
     ].where((part) => part.trim().isNotEmpty).join(', ');
 
-    return Material(
+    final card = Material(
       color: backgroundColor,
       borderRadius: borderRadius,
       clipBehavior: Clip.antiAlias,
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: borderRadius,
-          border: mutedByHoliday
+          border: mutedByHoliday || outsideCurrentWeek
               ? Border.all(
                   color: colorScheme.outlineVariant.withValues(alpha: 0.72),
                 )
@@ -1526,8 +1559,60 @@ class _CourseCard extends StatelessWidget {
         ),
       ),
     );
+
+    if (!outsideCurrentWeek) {
+      return card;
+    }
+
+    return ClipRRect(
+      key: ValueKey('non-current-week-course-mask-${course.id}'),
+      borderRadius: borderRadius,
+      child: ColorFiltered(
+        colorFilter: _grayscaleCourseColorFilter,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            card,
+            Positioned.fill(
+              child: IgnorePointer(
+                child: ColoredBox(
+                  color: colorScheme.surface.withValues(
+                    alpha: colorScheme.brightness == Brightness.light
+                        ? 0.22
+                        : 0.14,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
+
+const _grayscaleCourseColorFilter = ColorFilter.matrix(<double>[
+  0.2126,
+  0.7152,
+  0.0722,
+  0,
+  0,
+  0.2126,
+  0.7152,
+  0.0722,
+  0,
+  0,
+  0.2126,
+  0.7152,
+  0.0722,
+  0,
+  0,
+  0,
+  0,
+  0,
+  1,
+  0,
+]);
 
 Color _holidayMutedCourseColor(ColorScheme colorScheme) {
   return Color.alphaBlend(

@@ -1,4 +1,5 @@
 import 'package:crid/app/adaptive_shell.dart';
+import 'package:crid/app/launch_activation.dart';
 import 'package:crid/app/motion.dart';
 import 'package:crid/features/editor/presentation/course_editor_page.dart';
 import 'package:crid/features/import/presentation/conflict_diff_page.dart';
@@ -14,8 +15,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final importFilePath = launchImportFilePath(
+    ref.watch(launchArgumentsProvider),
+  );
   return GoRouter(
-    initialLocation: '/timetable',
+    initialLocation: importFilePath == null ? '/timetable' : '/import',
     routes: [
       ShellRoute(
         builder: (context, state, child) => AdaptiveShell(child: child),
@@ -184,9 +188,58 @@ class _OverlayPage extends StatelessWidget {
         leading: BackButton(onPressed: () => _returnFromOverlay(context, uri)),
         title: Text(title),
       ),
-      body: SafeArea(top: false, child: child),
+      body: SafeArea(
+        top: false,
+        child: _DesktopOverlayFrame(uri: uri, child: child),
+      ),
     );
   }
+}
+
+class _DesktopOverlayFrame extends StatelessWidget {
+  const _DesktopOverlayFrame({required this.uri, required this.child});
+
+  final Uri uri;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 840) {
+          return child;
+        }
+        final maxWidth = _desktopOverlayMaxWidth(uri.path);
+        final contentWidth = constraints.maxWidth > maxWidth
+            ? maxWidth
+            : constraints.maxWidth;
+        return ColoredBox(
+          color: Theme.of(context).colorScheme.surfaceContainerLowest,
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              width: contentWidth,
+              height: constraints.maxHeight,
+              child: child,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+double _desktopOverlayMaxWidth(String location) {
+  if (location == '/export') {
+    return 1120;
+  }
+  if (location.startsWith('/licenses')) {
+    return 980;
+  }
+  if (location.startsWith('/import')) {
+    return 1080;
+  }
+  return 1120;
 }
 
 void _returnFromOverlay(BuildContext context, Uri uri) {

@@ -20,6 +20,7 @@
 
 - 查看和编辑课表
 - 上课提醒
+- Windows 原生通知、资源管理器文件关联和桌面宽屏工作区
 - 调休自动调整
 - 从教务系统导入 `.xls` 格式的课表
 - 从教务系统导入 `.mht`、`.mhtml` 和 `.pdf` 格式的考试安排
@@ -31,7 +32,7 @@
 
 ## 如何安装
 
-正式版安装包发布在 [GitHub Releases](https://github.com/Gliese-876/Crid/releases)。目前最新正式版是 `v1.1.0-release`。
+正式版安装包发布在 [GitHub Releases](https://github.com/Gliese-876/Crid/releases)。最新 Windows 版是 `v1.2.0`；Android 最新安装包仍为 `v1.1.0`。
 
 ### Android
 
@@ -45,27 +46,19 @@
 
 ### Windows
 
-下载这两个文件：
+1. 下载 `Crid-1.2.0-windows-x64.zip` 并完整解压。
+2. 双击 `Install-Crid.cmd`。
+3. 首次安装时同意一次 UAC 弹窗，以便将随包公开证书写入本地计算机的“受信任人”证书存储；安装完成后从开始菜单打开 Crid。
 
-- `Crid-1.1.0-release-windows.msix`
-- `Crid-1.1.0-release-windows.cer`
+更新时下载并解压新版 ZIP，再次双击 `Install-Crid.cmd` 即可。使用同一签名证书的后续更新通常不再需要 UAC。
 
-由于当前 Windows 安装包使用自签名证书，安装前需要先信任随包提供的证书。建议使用管理员 PowerShell 执行：
-
-```powershell
-$certPath = "C:\path\to\Crid-1.1.0-release-windows.cer"
-
-Import-Certificate -FilePath $certPath -CertStoreLocation Cert:\LocalMachine\TrustedPeople
-Import-Certificate -FilePath $certPath -CertStoreLocation Cert:\LocalMachine\Root
-```
-
-然后双击 `.msix` 安装，或继续在管理员 PowerShell 中执行：
+如需手动安装，可将 ZIP 内的 `.cer` 导入 `Cert:\LocalMachine\TrustedPeople`，再运行：
 
 ```powershell
-Add-AppxPackage -Path "C:\path\to\Crid-1.1.0-release-windows.msix"
+Add-AppxPackage -Path "C:\path\to\Crid-1.2.0-windows-x64.msix" -ForceApplicationShutdown -ForceUpdateFromAnyVersion
 ```
 
-如果安装器提示 `0x800B0109`，通常说明证书只导入到了“当前用户”，没有导入到“本地计算机”的受信任证书存储。
+如果安装器提示 `0x800B0109`，通常说明证书没有导入到“本地计算机”的受信任人证书存储。
 
 ## 技术结构
 
@@ -80,7 +73,7 @@ Add-AppxPackage -Path "C:\path\to\Crid-1.1.0-release-windows.msix"
 | `lib/features/editor/` | 课程新增和编辑 |
 | `lib/features/export/` | ICS 和图片导出 |
 | `lib/features/reminder/` | 本地课程提醒和滚动提醒窗口 |
-| `lib/features/settings/` | 设置页、假期数据、Android 后台设置 |
+| `lib/features/settings/` | 设置页、假期数据、Android 后台设置和 Windows 原生集成 |
 | `lib/l10n/` | 简体中文、繁体中文和英文文案 |
 | `test/` | 导入、提醒、导出、主题、仓库和界面测试 |
 
@@ -99,14 +92,14 @@ Add-AppxPackage -Path "C:\path\to\Crid-1.1.0-release-windows.msix"
 ## 已知问题
 
 - 目前主要支持解析北京师范大学珠海校区的课表和考试安排文件
-- 通知系统可能不稳定
-- Windows 端尚不成熟，与 Android 端界面、功能差距较大
+- Windows 安装包使用自签名证书，首次安装需要一次 UAC 确认以建立本机信任
+- Windows Toast 是否显示仍受系统通知开关、专注助手和组织策略影响
 
 ## 近期计划
 
 - [ ] 支持北京师范大学北京校区的课表文件格式
 - [ ] 优化通知系统的稳定性
-- [ ] 改进 Windows 端的界面和功能，使其与 Android 端更加一致
+- [ ] 继续完善 Windows 键盘快捷键、无障碍和自动更新体验
 - [ ] 增加小组件（Widgets）支持
 
 ## 远期愿景

@@ -1096,6 +1096,18 @@ abstract class AppLocalizations {
   /// **'主题设置加载失败：{error}'**
   String failedToLoadThemeSetting(Object error);
 
+  /// No description provided for @failedToLoadTimetableDisplaySetting.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'课表显示设置加载失败：{error}'**
+  String failedToLoadTimetableDisplaySetting(Object error);
+
+  /// No description provided for @failedToLoadExportDisplaySetting.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'导出显示设置加载失败：{error}'**
+  String failedToLoadExportDisplaySetting(Object error);
+
   /// No description provided for @language.
   ///
   /// In zh_Hans, this message translates to:
@@ -1131,6 +1143,30 @@ abstract class AppLocalizations {
   /// In zh_Hans, this message translates to:
   /// **'显示'**
   String get display;
+
+  /// No description provided for @showNonCurrentWeekCourses.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'显示非本周课程'**
+  String get showNonCurrentWeekCourses;
+
+  /// No description provided for @showNonCurrentWeekCoursesSubtitle.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'开启后，非本周课程会以灰色显示在课表中。'**
+  String get showNonCurrentWeekCoursesSubtitle;
+
+  /// No description provided for @exportDisplaySettings.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'导出显示'**
+  String get exportDisplaySettings;
+
+  /// No description provided for @showNonCurrentWeekCoursesInExportSubtitle.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'开启后，周课表和整学期 PNG 中的非本周课程会以灰色显示。'**
+  String get showNonCurrentWeekCoursesInExportSubtitle;
 
   /// No description provided for @themeModeSystem.
   ///
@@ -1294,6 +1330,42 @@ abstract class AppLocalizations {
   /// **'Android 后台状态加载失败：{error}'**
   String failedToLoadAndroidBackgroundStatus(Object error);
 
+  /// No description provided for @windowsReminderSettings.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'Windows 课程提醒'**
+  String get windowsReminderSettings;
+
+  /// No description provided for @windowsReminderSettingsSubtitle.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'Windows 会通过系统调度已启用的提醒，关闭课格后也不需要保持后台运行。'**
+  String get windowsReminderSettingsSubtitle;
+
+  /// No description provided for @windowsSystemNotifications.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'系统通知'**
+  String get windowsSystemNotifications;
+
+  /// No description provided for @windowsNotificationsAllowed.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'通知已开启，关闭课格后系统仍可显示已调度的提醒。'**
+  String get windowsNotificationsAllowed;
+
+  /// No description provided for @windowsNotificationsBlocked.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'Windows 通知已关闭，请在系统设置中开启以接收课程提醒。'**
+  String get windowsNotificationsBlocked;
+
+  /// No description provided for @failedToLoadWindowsReminderStatus.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'Windows 提醒状态加载失败：{error}'**
+  String failedToLoadWindowsReminderStatus(Object error);
+
   /// No description provided for @persistentBackgroundRuntime.
   ///
   /// In zh_Hans, this message translates to:
@@ -1384,6 +1456,12 @@ abstract class AppLocalizations {
   /// **'Android 会打开系统授权页；授权后提醒渠道可绕过免打扰。'**
   String get ignoreDoNotDisturbSubtitle;
 
+  /// No description provided for @windowsIgnoreDoNotDisturbSubtitle.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'Windows 会将课程提醒标记为紧急通知，使其可以绕过免打扰。'**
+  String get windowsIgnoreDoNotDisturbSubtitle;
+
   /// No description provided for @vibrateReminder.
   ///
   /// In zh_Hans, this message translates to:
@@ -1395,6 +1473,12 @@ abstract class AppLocalizations {
   /// In zh_Hans, this message translates to:
   /// **'课程提醒仍会振动，但不播放提示音。'**
   String get vibrateReminderSubtitle;
+
+  /// No description provided for @windowsMuteReminderSoundSubtitle.
+  ///
+  /// In zh_Hans, this message translates to:
+  /// **'Windows 会静音显示课程提醒；是否振动由设备和系统设置决定。'**
+  String get windowsMuteReminderSoundSubtitle;
 
   /// No description provided for @goToToday.
   ///

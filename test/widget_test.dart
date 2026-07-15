@@ -1,8 +1,9 @@
 import 'dart:async';
-import 'dart:typed_data';
+import 'dart:io';
 
 import 'package:crid/app/app.dart';
 import 'package:crid/app/app_state.dart';
+import 'package:crid/app/launch_activation.dart';
 import 'package:crid/app/locale_controller.dart';
 import 'package:crid/app/motion.dart';
 import 'package:crid/app/theme_controller.dart';
@@ -13,7 +14,10 @@ import 'package:crid/data/database/timetable_time.dart' hide WeekParity;
 import 'package:crid/features/reminder/data/local_notification_reminder_scheduler.dart';
 import 'package:crid/features/settings/data/android_background_service.dart';
 import 'package:crid/features/settings/data/china_holiday_service.dart';
+import 'package:crid/features/settings/data/export_display_settings_controller.dart';
 import 'package:crid/features/settings/data/holiday_settings_controller.dart';
+import 'package:crid/features/settings/data/timetable_display_settings_controller.dart';
+import 'package:crid/features/settings/data/windows_reminder_service.dart';
 import 'package:crid/features/settings/presentation/export_page.dart';
 import 'package:crid/features/settings/presentation/third_party_licenses_page.dart';
 import 'package:crid/features/timetable/data/timetable_repository.dart';
@@ -22,6 +26,7 @@ import 'package:crid/features/timetable/presentation/plan_management_page.dart';
 import 'package:crid/features/timetable/presentation/timetable_home_page.dart';
 import 'package:drift/native.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -43,6 +48,9 @@ void main() {
     ExportFileService? exportFileService,
     ReminderSchedulerService? reminderScheduler,
     AndroidBackgroundService? androidBackgroundService,
+    WindowsReminderService? windowsReminderService,
+    List<String> launchArguments = const <String>[],
+    bool settle = true,
     FutureOr<void> Function(AppDatabase database)? seedDatabase,
   }) async {
     debugOpenSourceLicensePreloadEnabled = false;
@@ -76,8 +84,13 @@ void main() {
             androidBackgroundServiceProvider.overrideWithValue(
               androidBackgroundService,
             ),
+          if (windowsReminderService != null)
+            windowsReminderServiceProvider.overrideWithValue(
+              windowsReminderService,
+            ),
           if (exportFileService != null)
             exportFileServiceProvider.overrideWithValue(exportFileService),
+          launchArgumentsProvider.overrideWithValue(launchArguments),
         ],
         child: const CridApp(),
       ),
@@ -91,7 +104,11 @@ void main() {
         break;
       }
     }
-    await tester.pumpAndSettle();
+    if (settle) {
+      await tester.pumpAndSettle();
+    } else {
+      await tester.pump();
+    }
   }
 
   testWidgets('shows timetable on narrow screens', (tester) async {
@@ -1041,6 +1058,83 @@ void main() {
     expect(find.textContaining('crid.ics'), findsOneWidget);
   });
 
+  testWidgets('export has an independent non-current-week course setting', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await pumpApp(tester, locale: const Locale('en'));
+
+    await tester.tap(find.byTooltip('Export'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Export display'), findsOneWidget);
+    final setting = find.ancestor(
+      of: find.text('Show courses outside the current week'),
+      matching: find.byType(SwitchListTile),
+    );
+    expect(setting, findsOneWidget);
+    await tester.tap(setting);
+    await tester.pumpAndSettle();
+
+    final preferences = await SharedPreferences.getInstance();
+    expect(
+      preferences.getBool(showNonCurrentWeekCoursesInExportPreferenceKey),
+      isTrue,
+    );
+    expect(preferences.getBool(showNonCurrentWeekCoursesPreferenceKey), isNull);
+  });
+
+  testWidgets('Windows export uses a three-tile desktop workspace', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await pumpApp(tester, locale: const Locale('en'));
+    await tester.tap(find.byTooltip('Export'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GridView), findsOneWidget);
+    final calendar = tester.getTopLeft(find.text('ICS calendar export'));
+    final weekImage = tester.getTopLeft(find.text('Current-week image'));
+    final semesterImage = tester.getTopLeft(find.text('Full-semester image'));
+    expect(calendar.dy, closeTo(weekImage.dy, 1));
+    expect(weekImage.dy, closeTo(semesterImage.dy, 1));
+    expect(calendar.dx, lessThan(weekImage.dx));
+    expect(weekImage.dx, lessThan(semesterImage.dx));
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('Windows file activation opens the desktop import workspace', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final importPath = File('test/日历-大一下.ics').absolute.path;
+
+    await pumpApp(
+      tester,
+      locale: const Locale('en'),
+      launchArguments: [importPath],
+      settle: false,
+    );
+
+    expect(find.text('Import'), findsOneWidget);
+    expect(find.byType(NavigationRail), findsNothing);
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Import center').last).dx,
+      lessThan(tester.getTopLeft(find.text('Import preview')).dx),
+    );
+    debugDefaultTargetPlatformOverride = null;
+  });
+
   testWidgets('wide top bar moves settings out of navigation rail', (
     tester,
   ) async {
@@ -1092,9 +1186,24 @@ void main() {
     );
 
     expect(find.text('Display'), findsOneWidget);
+    expect(find.text('Show courses outside the current week'), findsOneWidget);
     expect(find.text('Follow system'), findsWidgets);
     expect(find.text('Light'), findsOneWidget);
     expect(find.text('Dark'), findsOneWidget);
+
+    final setting = find.ancestor(
+      of: find.text('Show courses outside the current week'),
+      matching: find.byType(SwitchListTile),
+    );
+    await tester.tap(setting);
+    await tester.pumpAndSettle();
+
+    final preferences = await SharedPreferences.getInstance();
+    expect(preferences.getBool(showNonCurrentWeekCoursesPreferenceKey), isTrue);
+    expect(
+      preferences.getBool(showNonCurrentWeekCoursesInExportPreferenceKey),
+      isNull,
+    );
   });
 
   testWidgets(
@@ -1123,6 +1232,44 @@ void main() {
       expect(find.text('让提醒更稳定'), findsNothing);
     },
   );
+
+  testWidgets('Windows settings use native reminder status and two columns', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final windowsService = _FakeWindowsReminderService();
+
+    await pumpApp(
+      tester,
+      locale: const Locale('en'),
+      windowsReminderService: windowsService,
+    );
+
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Windows reminders'), findsOneWidget);
+    expect(find.text('System notifications'), findsOneWidget);
+    expect(find.text('Android background running'), findsNothing);
+    expect(
+      find.text(
+        'Windows marks course reminders as urgent so they can break through Do Not Disturb.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      tester.getTopLeft(find.text('Course reminders')).dx,
+      lessThan(tester.getTopLeft(find.text('Language')).dx),
+    );
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Notifications'));
+    await tester.pump();
+    expect(windowsService.openedSettings, isTrue);
+    debugDefaultTargetPlatformOverride = null;
+  });
 
   testWidgets('settings info section shows licenses before app version', (
     tester,
@@ -1446,6 +1593,63 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'non-current-week courses are hidden by default and gray when enabled',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await pumpApp(tester, locale: const Locale('en'));
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(CridApp)),
+      );
+      final otherWeek = expectedInitialWeek <= maxSemesterWeek - 4
+          ? expectedInitialWeek + 4
+          : expectedInitialWeek - 4;
+      await container
+          .read(timetableControllerProvider.notifier)
+          .saveCourse(
+            CourseSlotDraft(
+              name: 'Alternating Week Systems',
+              teacher: 'Professor Gray',
+              location: 'Room 404',
+              weekday: DateTime.monday,
+              timeRange: CourseTimeRange.fromPeriods(1, 1),
+              startWeek: otherWeek,
+              endWeek: otherWeek,
+              parity: WeekParity.all,
+              color: courseColorForIndex(4),
+            ),
+          );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Alternating Week Systems'), findsNothing);
+
+      await container
+          .read(showNonCurrentWeekCoursesProvider.notifier)
+          .setEnabled(true);
+      await tester.pumpAndSettle();
+
+      final courseTitle = find.text('Alternating Week Systems');
+      expect(courseTitle, findsWidgets);
+      expect(
+        find.ancestor(
+          of: courseTitle.first,
+          matching: find.byType(ColorFiltered),
+        ),
+        findsOneWidget,
+      );
+      final colorScheme = Theme.of(
+        tester.element(courseTitle.first),
+      ).colorScheme;
+      expect(
+        tester.widget<Text>(courseTitle.first).style?.color,
+        colorScheme.onSurfaceVariant,
+      );
+    },
+  );
+
   testWidgets('course details sheet stays above mobile bottom navigation', (
     tester,
   ) async {
@@ -1717,6 +1921,23 @@ class _FakeAndroidBackgroundService extends AndroidBackgroundService {
       persistentBackgroundEnabled: true,
       persistentBackgroundRunning: true,
     );
+  }
+}
+
+class _FakeWindowsReminderService extends WindowsReminderService {
+  var openedSettings = false;
+
+  @override
+  Future<WindowsReminderStatus> status() async {
+    return const WindowsReminderStatus(
+      available: true,
+      notificationsAllowed: true,
+    );
+  }
+
+  @override
+  Future<void> openNotificationSettings() async {
+    openedSettings = true;
   }
 }
 

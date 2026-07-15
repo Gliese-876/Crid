@@ -455,12 +455,32 @@
       }
     }
   },
+  "failedToLoadTimetableDisplaySetting": "课表显示设置加载失败：{error}",
+  "@failedToLoadTimetableDisplaySetting": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "failedToLoadExportDisplaySetting": "导出显示设置加载失败：{error}",
+  "@failedToLoadExportDisplaySetting": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
   "language": "语言",
   "languageSystem": "跟随系统",
   "languageSimplifiedChinese": "简体中文",
   "languageTraditionalChinese": "繁體中文",
   "languageEnglish": "English",
   "display": "显示",
+  "showNonCurrentWeekCourses": "显示非本周课程",
+  "showNonCurrentWeekCoursesSubtitle": "开启后，非本周课程会以灰色显示在课表中。",
+  "exportDisplaySettings": "导出显示",
+  "showNonCurrentWeekCoursesInExportSubtitle": "开启后，周课表和整学期 PNG 中的非本周课程会以灰色显示。",
   "themeModeSystem": "跟随系统",
   "themeModeLight": "浅色",
   "themeModeDark": "深色",
@@ -529,6 +549,19 @@
       }
     }
   },
+  "windowsReminderSettings": "Windows 课程提醒",
+  "windowsReminderSettingsSubtitle": "Windows 会通过系统调度已启用的提醒，关闭课格后也不需要保持后台运行。",
+  "windowsSystemNotifications": "系统通知",
+  "windowsNotificationsAllowed": "通知已开启，关闭课格后系统仍可显示已调度的提醒。",
+  "windowsNotificationsBlocked": "Windows 通知已关闭，请在系统设置中开启以接收课程提醒。",
+  "failedToLoadWindowsReminderStatus": "Windows 提醒状态加载失败：{error}",
+  "@failedToLoadWindowsReminderStatus": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
   "persistentBackgroundRuntime": "持续后台运行",
   "persistentBackgroundRuntimeSubtitle": "开启后会在通知栏显示静默常驻通知，用于维持课程提醒的后台任务。",
   "persistentBackgroundRuntimeAllowed": "已获得电池优化豁免，后台任务受系统电池限制的影响会减少。",
@@ -551,8 +584,10 @@
   "minutesUnit": "分钟",
   "ignoreDoNotDisturb": "忽略免打扰",
   "ignoreDoNotDisturbSubtitle": "Android 会打开系统授权页；授权后提醒渠道可绕过免打扰。",
+  "windowsIgnoreDoNotDisturbSubtitle": "Windows 会将课程提醒标记为紧急通知，使其可以绕过免打扰。",
   "vibrateReminder": "关闭提醒声音",
   "vibrateReminderSubtitle": "课程提醒仍会振动，但不播放提示音。",
+  "windowsMuteReminderSoundSubtitle": "Windows 会静音显示课程提醒；是否振动由设备和系统设置决定。",
   "goToToday": "回到今天",
   "delete": "删除",
   "save": "保存",

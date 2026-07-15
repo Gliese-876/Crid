@@ -606,6 +606,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String failedToLoadTimetableDisplaySetting(Object error) {
+    return 'Failed to load timetable display setting: $error';
+  }
+
+  @override
+  String failedToLoadExportDisplaySetting(Object error) {
+    return 'Failed to load export display setting: $error';
+  }
+
+  @override
   String get language => 'Language';
 
   @override
@@ -622,6 +632,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get display => 'Display';
+
+  @override
+  String get showNonCurrentWeekCourses =>
+      'Show courses outside the current week';
+
+  @override
+  String get showNonCurrentWeekCoursesSubtitle =>
+      'Courses not held in the selected week appear in gray on the timetable.';
+
+  @override
+  String get exportDisplaySettings => 'Export display';
+
+  @override
+  String get showNonCurrentWeekCoursesInExportSubtitle =>
+      'Courses not held in each week appear in gray in weekly and full-semester PNG exports.';
 
   @override
   String get themeModeSystem => 'Follow system';
@@ -726,6 +751,29 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get windowsReminderSettings => 'Windows reminders';
+
+  @override
+  String get windowsReminderSettingsSubtitle =>
+      'Windows schedules enabled reminders with the system, so Crid does not need to remain open.';
+
+  @override
+  String get windowsSystemNotifications => 'System notifications';
+
+  @override
+  String get windowsNotificationsAllowed =>
+      'Enabled. Scheduled reminders can appear after Crid is closed.';
+
+  @override
+  String get windowsNotificationsBlocked =>
+      'Notifications are disabled in Windows. Enable them in system settings to receive course reminders.';
+
+  @override
+  String failedToLoadWindowsReminderStatus(Object error) {
+    return 'Failed to load Windows reminder status: $error';
+  }
+
+  @override
   String get persistentBackgroundRuntime => 'Continuous background running';
 
   @override
@@ -776,11 +824,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'Android opens a system access page; after approval, the reminder channel can bypass DND.';
 
   @override
+  String get windowsIgnoreDoNotDisturbSubtitle =>
+      'Windows marks course reminders as urgent so they can break through Do Not Disturb.';
+
+  @override
   String get vibrateReminder => 'Mute reminder sound';
 
   @override
   String get vibrateReminderSubtitle =>
       'Class reminders still vibrate, but no sound is played.';
+
+  @override
+  String get windowsMuteReminderSoundSubtitle =>
+      'Windows shows course reminders silently; vibration depends on the device and system settings.';
 
   @override
   String get goToToday => 'Today';

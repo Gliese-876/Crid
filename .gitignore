@@ -11,6 +11,7 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+.codex-remote-attachments/
 
 # IntelliJ related
 *.iml
@@ -39,9 +40,6 @@ migrate_working_dir/
 *.apk
 *.aab
 *.msix
-
-# Local changelogs
-/CHANGELOG*.md
 
 # Local Windows signing certificates
 /windows/certs/

@@ -165,30 +165,51 @@ class AppDatabase extends _$AppDatabase {
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (migrator, from, to) async {
-      if (from < 2) {
+      if (from < 2 && !await _columnExists('semesters', 'end_date')) {
         await migrator.addColumn(semesters, semesters.endDate);
       }
-      if (from < 3) {
+      if (from < 3 &&
+          !await _columnExists('semesters', 'name_manually_edited')) {
         await migrator.addColumn(semesters, semesters.nameManuallyEdited);
       }
       if (from < 4) {
-        await migrator.addColumn(
-          reminderRules,
-          reminderRules.reminderOffsetsJson,
-        );
-        await migrator.addColumn(reminderRules, reminderRules.ignoreDnd);
-        await migrator.addColumn(reminderRules, reminderRules.vibrateOnly);
-        await migrator.createTable(examSchedules);
+        if (!await _columnExists('reminder_rules', 'reminder_offsets_json')) {
+          await migrator.addColumn(
+            reminderRules,
+            reminderRules.reminderOffsetsJson,
+          );
+        }
+        if (!await _columnExists('reminder_rules', 'ignore_dnd')) {
+          await migrator.addColumn(reminderRules, reminderRules.ignoreDnd);
+        }
+        if (!await _columnExists('reminder_rules', 'vibrate_only')) {
+          await migrator.addColumn(reminderRules, reminderRules.vibrateOnly);
+        }
+        if (!await _columnExists('exam_schedules', 'id')) {
+          await migrator.createTable(examSchedules);
+        }
       }
       if (from < 5) {
-        await migrator.addColumn(classSessions, classSessions.startMinuteOfDay);
-        await migrator.addColumn(classSessions, classSessions.endMinuteOfDay);
+        if (!await _columnExists('class_sessions', 'start_minute_of_day')) {
+          await migrator.addColumn(
+            classSessions,
+            classSessions.startMinuteOfDay,
+          );
+        }
+        if (!await _columnExists('class_sessions', 'end_minute_of_day')) {
+          await migrator.addColumn(classSessions, classSessions.endMinuteOfDay);
+        }
       }
-      if (from < 6) {
+      if (from < 6 && !await _columnExists('exam_schedules', 'is_hidden')) {
         await migrator.addColumn(examSchedules, examSchedules.isHidden);
       }
     },
   );
+
+  Future<bool> _columnExists(String tableName, String columnName) async {
+    final columns = await customSelect('PRAGMA table_info("$tableName")').get();
+    return columns.any((row) => row.read<String>('name') == columnName);
+  }
 
   Future<List<ClassSessionInfo>> sessionsForPlan(int planId) async {
     final rows =

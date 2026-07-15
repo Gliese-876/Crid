@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.1.0-release+2
+version: 1.2.0-release+3
 
 environment:
   sdk: ^3.11.5
@@ -81,9 +81,16 @@ msix_config:
   publisher_display_name: Crid
   identity_name: app.crid.release
   publisher: CN=Crid Release, O=Crid, C=CN
-  msix_version: 1.1.0.0
+  msix_version: 1.2.0.0
+  logo_path: android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
+  trim_logo: false
+  file_extension: .ics, .xls, .mht, .mhtml, .pdf, .txt
   certificate_path: windows/certs/crid-release-msix.pfx
   install_certificate: false
+  toast_activator:
+    clsid: "6f338c02-cb02-4d1d-8e6f-10a02e7c7ac3"
+    arguments: "notification-activation"
+    display_name: "Crid course reminders"
   app_installer:
     publish_folder_path: build/windows/msix
 
@@ -105,6 +112,7 @@ flutter:
   #   - images/a_dot_ham.jpeg
   assets:
     - LICENSE
+    - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

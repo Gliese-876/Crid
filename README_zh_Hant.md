@@ -20,6 +20,7 @@
 
 - 查看和編輯課表
 - 上課提醒
+- Windows 原生通知、檔案總管檔案關聯和桌面寬螢幕工作區
 - 調休自動調整
 - 從教務系統匯入 `.xls` 格式的課表
 - 從教務系統匯入 `.mht`、`.mhtml` 和 `.pdf` 格式的考試安排
@@ -31,7 +32,7 @@
 
 ## 如何安裝
 
-正式版安裝包發布在 [GitHub Releases](https://github.com/Gliese-876/Crid/releases)。目前最新正式版是 `v1.1.0-release`。
+正式版安裝包發布在 [GitHub Releases](https://github.com/Gliese-876/Crid/releases)。最新 Windows 版是 `v1.2.0`；Android 最新安裝包仍為 `v1.1.0`。
 
 ### Android
 
@@ -45,27 +46,19 @@
 
 ### Windows
 
-下載這兩個檔案：
+1. 下載 `Crid-1.2.0-windows-x64.zip` 並完整解壓縮。
+2. 按兩下 `Install-Crid.cmd`。
+3. 首次安裝時同意一次 UAC 視窗，讓安裝器將隨附公開憑證寫入本機電腦的「受信任的人」憑證存放區；完成後從開始功能表開啟 Crid。
 
-- `Crid-1.1.0-release-windows.msix`
-- `Crid-1.1.0-release-windows.cer`
+更新時下載並解壓縮新版 ZIP，再次執行 `Install-Crid.cmd` 即可。使用相同簽章憑證的後續更新通常不再需要 UAC。
 
-由於目前 Windows 安裝包使用自簽名憑證，安裝前需要先信任隨包提供的憑證。建議使用系統管理員 PowerShell 執行：
-
-```powershell
-$certPath = "C:\path\to\Crid-1.1.0-release-windows.cer"
-
-Import-Certificate -FilePath $certPath -CertStoreLocation Cert:\LocalMachine\TrustedPeople
-Import-Certificate -FilePath $certPath -CertStoreLocation Cert:\LocalMachine\Root
-```
-
-然後雙擊 `.msix` 安裝，或繼續在系統管理員 PowerShell 中執行：
+如需手動安裝，可將 ZIP 內的 `.cer` 匯入 `Cert:\LocalMachine\TrustedPeople`，再執行：
 
 ```powershell
-Add-AppxPackage -Path "C:\path\to\Crid-1.1.0-release-windows.msix"
+Add-AppxPackage -Path "C:\path\to\Crid-1.2.0-windows-x64.msix" -ForceApplicationShutdown -ForceUpdateFromAnyVersion
 ```
 
-如果安裝器提示 `0x800B0109`，通常代表憑證只匯入到了「目前使用者」，沒有匯入到「本機電腦」的受信任憑證儲存區。
+若安裝器顯示 `0x800B0109`，通常表示憑證沒有匯入本機電腦的受信任的人憑證存放區。
 
 ## 技術結構
 
@@ -80,7 +73,7 @@ Add-AppxPackage -Path "C:\path\to\Crid-1.1.0-release-windows.msix"
 | `lib/features/editor/` | 課程新增和編輯 |
 | `lib/features/export/` | ICS 和圖片匯出 |
 | `lib/features/reminder/` | 本機課程提醒和滾動提醒窗口 |
-| `lib/features/settings/` | 設定頁、假期資料、Android 背景設定 |
+| `lib/features/settings/` | 設定頁、假期資料、Android 背景設定和 Windows 原生整合 |
 | `lib/l10n/` | 簡體中文、繁體中文和英文文案 |
 | `test/` | 匯入、提醒、匯出、主題、倉庫和介面測試 |
 
@@ -99,14 +92,14 @@ Add-AppxPackage -Path "C:\path\to\Crid-1.1.0-release-windows.msix"
 ## 已知問題
 
 - 目前主要支援解析北京師範大學珠海校區的課表和考試安排檔案
-- 通知系統可能不穩定
-- Windows 端尚不成熟，與 Android 端介面、功能差距較大
+- Windows 安裝包使用自簽名憑證，首次安裝需要一次 UAC 確認以建立本機信任
+- Windows Toast 是否顯示仍受系統通知設定、專注輔助和組織原則影響
 
 ## 近期計畫
 
 - [ ] 支援北京師範大學北京校區的課表檔案格式
 - [ ] 優化通知系統的穩定性
-- [ ] 改進 Windows 端的介面和功能，使其與 Android 端更加一致
+- [ ] 繼續完善 Windows 鍵盤快速鍵、無障礙和更新體驗
 - [ ] 增加小工具（Widgets）支援
 
 ## 遠期願景

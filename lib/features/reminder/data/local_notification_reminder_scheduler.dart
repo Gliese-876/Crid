@@ -4,6 +4,7 @@ import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../../../data/database/timetable_time.dart';
+import 'notification_platform_config.dart';
 import '../domain/reminder_window.dart';
 
 const defaultReminderScheduleWindowDays = defaultReminderWindowDays;
@@ -227,13 +228,9 @@ class FlutterLocalReminderScheduler implements ReminderSchedulerService {
       return;
     }
     await _plugin.initialize(
-      settings: const InitializationSettings(
-        android: AndroidInitializationSettings('ic_stat_notification'),
-        windows: WindowsInitializationSettings(
-          appName: 'Crid',
-          appUserModelId: 'Crid.App',
-          guid: '6f338c02-cb02-4d1d-8e6f-10a02e7c7ac3',
-        ),
+      settings: InitializationSettings(
+        android: const AndroidInitializationSettings('ic_stat_notification'),
+        windows: buildCridWindowsNotificationSettings(),
       ),
     );
     _initialized = true;
@@ -346,7 +343,12 @@ NotificationDetails reminderNotificationDetailsFor(
       timeoutAfter: timeoutAfter > 0 ? timeoutAfter : null,
       category: AndroidNotificationCategory.reminder,
     ),
-    windows: const WindowsNotificationDetails(),
+    windows: WindowsNotificationDetails(
+      audio: vibrateOnly ? WindowsNotificationAudio.silent() : null,
+      duration: WindowsNotificationDuration.long,
+      scenario: ignoreDoNotDisturb ? WindowsNotificationScenario.urgent : null,
+      timestamp: candidate.startAt,
+    ),
   );
 }
 
